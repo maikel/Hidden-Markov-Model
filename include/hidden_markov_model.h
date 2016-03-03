@@ -47,11 +47,10 @@ namespace mnb { namespace hmm {
           return;
 
         constexpr std::size_t N = states();
-        constexpr std::size_t M = symbols();
 
         // determine alpha_0
         std::size_t ob = *start;
-        assert(0 <= ob && ob < M);
+        assert(0 <= ob && ob < symbols());
         std::array<float_type, N> alpha;
         float_type scaling{ 0.0 };
         for (std::size_t i=0; i < N; ++i) {
@@ -71,7 +70,7 @@ namespace mnb { namespace hmm {
         std::array<float_type, N> pred_alpha(alpha);
         while (!(start == end)) {
           ob = *start;
-          assert(0 <= ob && ob < M);
+          assert(0 <= ob && ob < symbols());
           scaling = 0.0;
           for (std::size_t i = 0; i < N; ++i) {
             alpha[i] = 0.0;
