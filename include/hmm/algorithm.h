@@ -9,8 +9,6 @@
 
 #include "gsl_util.h"
 
-#include "hidden_markov_model.h"
-
 namespace mnb { namespace hmm {
 
   template<typename _Tp, std::size_t N, std::size_t M>
@@ -77,53 +75,19 @@ std::ostream& operator<<(std::ostream& out,
 
 namespace mnb { namespace hmm {
 
-  template <class Float, std::size_t N, std::size_t M>
-  class sequence_generator {
-    public:
-
-      sequence_generator(hidden_markov_model<Float,N,M> const& hmm)
-      noexcept: m_engine(std::random_device()), m_hmm(hmm)
-      {
-        Float X = uniform(m_engine);
-        auto it = find_by_distribution(hmm.pi.begin(), hmm.pi.end(), X);
-        m_current_state = std::distance(hmm.pi.begin(), it);
-      }
-
-      std::size_t operator()() noexcept
-      {
-        Float X = uniform(m_engine);
-
-        // get next symbol
-        auto symbol_it = find_by_distribution(
-            m_hmm.B[m_current_state].begin(),
-            m_hmm.B[m_current_state].end(), X);
-        std::size_t symbol =
-            std::distance(m_hmm.B[m_current_state].begin(), symbol_it);
-
-        // advance a state
-        auto state_it = find_by_distribution(
-            m_hmm.A[m_current_state].begin(),
-            m_hmm.A[m_current_state].end(), X);
-        m_current_state =
-            std::distance(m_hmm.A[m_current_state].begin(), state_it);
-
-        return symbol;
-      }
-
-    private:
-      // random device stuff
-      std::default_random_engine m_engine;
-      std::uniform_real_distribution<Float> uniform {0, 1};
-      // current context variables
-      const hidden_markov_model<Float,N,M>& m_hmm;
-      std::size_t m_current_state;
-  };
-
-  template <class Float, std::size_t N, std::size_t M>
-  sequence_generator make_generator(
-      hidden_markov_model<Float,N,M> const& hmm)
-  {
-      return sequence_generator<Float,N,M>(hmm);
+  template<class InputIter, class Float>
+  InputIter
+  find_by_distribution(InputIter start, InputIter end, Float X)
+  noexcept {
+      Float P_fn { 0.0 };
+    while (!(start == end)) {
+      P_fn += *start;
+      if (P_fn < X)
+        ++start;
+      else
+        break;
+    }
+    return start;
   }
 
   /**
@@ -133,6 +97,13 @@ namespace mnb { namespace hmm {
   inline bool is_nonnegative(_Tp value) noexcept
   {
     return !(value < 0.0);
+  }
+
+  template <typename _floatT, std::size_t accuracy = 15>
+  inline bool is_almost_equal(_floatT a, _floatT b) noexcept
+  {
+    const _floatT eps = pow10(-gsl::narrow<int>(accuracy));
+    return std::abs(a-b) < eps;
   }
 
   /**
@@ -160,21 +131,6 @@ namespace mnb { namespace hmm {
   {
     return std::all_of(begin(matrix), end(matrix),
         is_probability_array<_floatT, M, accuracy>);
-  }
-
-  template<class InputIter, class Float>
-  InputIter
-  find_by_distribution(InputIter start, InputIter end, Float X)
-  noexcept {
-      Float P_fn { 0.0 };
-    while (!(start == end)) {
-      P_fn += *start;
-      if (P_fn < X)
-        ++start;
-      else
-        break;
-    }
-    return start;
   }
 
 } // namespace hmm
