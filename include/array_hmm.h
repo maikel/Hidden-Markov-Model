@@ -7,8 +7,7 @@
 #include <sstream>
 #include <istream>
 
-#include "hidden_markov_model.h"
-#include "gsl_assert.h"
+#include "gsl_util.h"
 
 namespace nmb {
 
@@ -81,52 +80,30 @@ inline bool is_nonnegative(_Tp value) noexcept
 /**
  * @brief Checks if a given array is nonnegative and normed to one.
  */
-template<typename Probability_type, std::size_t N,
-    typename = typename std::enable_if<
-        std::is_floating_point<Probability_type>::value>::type>
-inline bool is_probability_array(std::array<Probability_type, N> const& p) noexcept
+template<typename _floatT, std::size_t N, std::size_t accuracy = 15,
+    typename =
+        typename std::enable_if<std::is_floating_point<_floatT>::value>::type>
+inline bool is_probability_array(std::array<_floatT, N> const& p) noexcept
 {
   bool entries_are_nonnegative = std::all_of(begin(p), end(p),
-      is_nonnegative<Probability_type>);
-  Probability_type total_sum = std::accumulate(begin(p), end(p), 0.0);
-  bool array_is_normed = (total_sum == 1.0);
+      is_nonnegative<_floatT>);
+  _floatT total_sum = std::accumulate(begin(p), end(p), 0.0);
+  bool array_is_normed =
+      (std::abs(total_sum - 1.0) < pow10(-gsl::narrow<int>(accuracy)));
   return entries_are_nonnegative && array_is_normed;
 }
 
 /**
- * @brief Checks if every entry is nonnegative and every column is normed to
- * one.
- */
-//template<typename Prob_type, std::size_t N, std::size_t M,
-//    typename = typename std::enable_if<std::is_floating_point<Prob_type>::value>::type>
-//bool is_left_stochastic_matrix(matrix_type<Prob_type, N, M> const &matrix) noexcept
-//{
-//  bool all_columns_are_normed = true;
-//  bool all_are_nonnegative = true;
-//  for (std::size_t col = 0;
-//      col < M && all_columns_are_normed && all_are_nonnegative; ++col) {
-//    Prob_type total_sum = 0.0;
-//    for (std::size_t row = 0; row < N; ++row) {
-//      total_sum += matrix[row][col];
-//      all_are_nonnegative &= !(matrix[row][col] < 0);
-//    }
-//    if (total_sum != 1.0)
-//      all_columns_are_normed = false;
-//  }
-//  return all_are_nonnegative && all_columns_are_normed;
-//}
-
-/**
  * @brief Checks if every entry nonnegative and every row is normed to one.
  */
-template<typename Probability_type, std::size_t N, std::size_t M,
-    typename = typename std::enable_if<
-        std::is_floating_point<Probability_type>::value>::type>
+template<typename _floatT, std::size_t N, std::size_t M,
+    std::size_t accuracy = 15, typename = typename std::enable_if<
+        std::is_floating_point<_floatT>::value>::type>
 inline bool is_right_stochastic_matrix(
-    matrix_type<Probability_type, N, M> const &matrix) noexcept
+    matrix_type<_floatT, N, M> const &matrix) noexcept
 {
   return std::all_of(begin(matrix), end(matrix),
-      is_probability_array<Probability_type, M>);
+      is_probability_array<_floatT, M, accuracy>);
 }
 
 template<typename _tp>
@@ -157,7 +134,7 @@ class number_iterator: public std::iterator<std::input_iterator_tag, _tp> {
 };
 
 template<size_t N, size_t M, typename _Probtp = float>
-class array_hmm: public hidden_markov_model<_Probtp> {
+class array_hmm {
   public:
     static constexpr size_t num_hidden_states = N;
     static constexpr size_t num_symbols = M;
@@ -177,7 +154,9 @@ class array_hmm: public hidden_markov_model<_Probtp> {
         }
     };
 
-    array_hmm(transition_matrix_type const& A, symbols_matrix_type const& B,
+    array_hmm(
+        transition_matrix_type const& A,
+        symbols_matrix_type const& B,
         state_distribution_type const& initial) :
         m_A(A), m_B(B), m_pi(initial)
     {
@@ -196,8 +175,8 @@ class array_hmm: public hidden_markov_model<_Probtp> {
      * Return the current probability to transition to hidden state `j` if
      * being in state `i`.
      */
-    inline virtual probability_type transition_probability(state_type i,
-        state_type j) const noexcept override
+    inline probability_type transition_probability(state_type i,
+        state_type j) const noexcept
     {
       return m_A[i][j];
     }
@@ -206,8 +185,8 @@ class array_hmm: public hidden_markov_model<_Probtp> {
      * Return the observation probability of symbol `k` under the restriction
      * of being in the hidden state `i`.
      */
-    inline virtual probability_type symbol_probability(state_type i,
-        symbol_type k) const noexcept override
+    inline probability_type symbol_probability(state_type i,
+        symbol_type k) const noexcept
     {
       return m_B[i][k];
     }
@@ -215,7 +194,7 @@ class array_hmm: public hidden_markov_model<_Probtp> {
     /**
      * Return the probability to start in the hidden state `i`.
      */
-    inline virtual probability_type initial_probability(state_type i) const noexcept override
+    inline probability_type initial_probability(state_type i) const noexcept
     {
       return m_pi[i];
     }
@@ -232,6 +211,9 @@ class array_hmm: public hidden_markov_model<_Probtp> {
         {
         }
     };
+
+    constexpr std::size_t num_states() const noexcept { return N; }
+    constexpr std::size_t num_symbol() const noexcept { return M; }
 
     state_iterator begin_states() const noexcept
     {
