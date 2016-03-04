@@ -61,7 +61,7 @@ namespace mnb { namespace hmm {
       matrix<T> mat(rows, std::vector<T>(cols));
       assert(mat.size() == rows);
       assert(std::all_of(mat.begin(), mat.end(),
-          [](std::vector<T> const& row) { return row.size() == cols; }));
+          [cols](std::vector<T> const& row) { return row.size() == cols; }));
       std::istringstream line;
       for (std::size_t i = 0; i < rows; ++i) {
         detail::getline(in, line);

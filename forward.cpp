@@ -4,6 +4,9 @@
 #include <fstream>
 
 #include "hidden_markov_model.h"
+#include "buffered_binary_iterator.h"
+
+#include <boost/iterator/transform_iterator.hpp>
 
 enum Exit_Error_Codes {
   exit_success = 0,
@@ -74,33 +77,63 @@ int main(int argc, char *argv[])
   input.open(argv[2], std::ifstream::in);
   std::string line;
   getline(input, line); // remove first line (obs length information)
-  auto obs_input_begin = std::istream_iterator<uint8_t>(input);
-  auto obs_input_end   = std::istream_iterator<uint8_t>();
+  auto obs_input_begin = std::istream_iterator<std::size_t>(input);
+  auto obs_input_end   = std::istream_iterator<std::size_t>();
   // read observation sequence into vector
-//  std::vector<uint8_t> obs;
-//  std::cout << "Reading observation sequence into vector ... " << std::flush;
-//  auto start = std::chrono::system_clock::now();
-//  std::copy(obs_input_begin, obs_input_end, std::back_inserter(obs));
-//  auto end = std::chrono::system_clock::now();
-//  std::chrono::duration<float, std::milli> dt = end-start;
-//  std::cout << "done. Time elpased: " << dt.count() << "ms.\n";
-//  input.close();
-
-//  std::cout << "size in memory of obs vector: "
-//      << obs.capacity()*sizeof(decltype(obs)::value_type)/1024/1024 << " MB\n";
-
-  // prepare alpha output stream
-  std::ofstream alpha_file("alpha.bin.dat", std::ofstream::binary | std::ofstream::out);
-
-  std::cout << "Starting forward algorithm on sequence ... " << std::flush;
+  std::vector<std::size_t> obs;
+  std::cout << "Reading observation sequence into vector ... " << std::flush;
   auto start = std::chrono::system_clock::now();
-//  hmm.forward(obs_input_begin, obs_input_end,
-//      std::ostreambuf_iterator<char>(alpha_file));
+  std::copy(obs_input_begin, obs_input_end, std::back_inserter(obs));
   auto end = std::chrono::system_clock::now();
   std::chrono::duration<float, std::milli> dt = end-start;
-  std::cout << "done. Time elpased: " << dt.count() << "ms.\n";
-  alpha_file.close();
+  input.close();
+  std::cout << "done. Time elapsed: " << dt.count() << "ms.\n";
 
+  std::cout << "size in memory of obs vector: "
+      << obs.capacity()*sizeof(decltype(obs)::value_type)/1024/1024 << " MB\n";
+
+  std::vector<std::pair<float, std::vector<float>>> alphas;
+//  alphas.reserve(obs.size());
+
+  // prepare alpha output stream
+  std::fstream alpha_file("alpha.bin.dat",
+      std::fstream::binary | std::fstream::out);
+  std::cout << "Starting forward algorithm on sequence ... " << std::flush;
+  start = std::chrono::system_clock::now();
+  hmm.forward(obs.begin(), obs.end(),
+      mnb::ostream_buffered_binary_iterator<float, 1>(alpha_file));
+//      std::back_inserter(alphas));
+  alpha_file.close();
+  end = std::chrono::system_clock::now();
+  dt = end-start;
+  std::cout << "done. Time elapsed: " << dt.count() << "ms.\n";
+
+  alpha_file.clear();
+  alpha_file.open("alpha.bin.dat", std::fstream::binary | std::fstream::in);
+  auto alphas_begin = mnb::alphas_binary_input_iterator<float>(alpha_file, states);
+  auto alphas_end = mnb::alphas_binary_input_iterator<float>();
+//  auto alphas_begin = alphas.begin();
+//  auto alphas_end = alphas.end();
+  auto logfirst = [](auto const& p) {
+    return -std::log(p.first);
+  };
+  auto scaling_begin = boost::make_transform_iterator(alphas_begin, logfirst);
+  auto scaling_end = boost::make_transform_iterator(alphas_end, logfirst);
+  std::cout << "Calculate log Probability from binary file ... " << std::flush;
+//  std::cout << "Calculate log Probability from array ... " << std::flush;
+  start = std::chrono::system_clock::now();
+  float P = std::accumulate(scaling_begin, scaling_end, 0.0f);
+  end = std::chrono::system_clock::now();
+  dt = end-start;
+  std::cout << "done. Time elapsed: " << dt.count() << "ms.\n";
+  std::cout << "log P(O | lambda) = " << P << std::endl;
+
+//  for (auto const& p : alphas) {
+//    std::cout << "scaling: " << p.first << ", alpha: ";
+//    std::copy(p.second.begin(), p.second.end(),
+//        std::ostream_iterator<float>(std::cout, " "));
+//    std::cout << "\n";
+//  }
 
   return exit_success;
 }
