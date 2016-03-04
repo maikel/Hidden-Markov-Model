@@ -6,13 +6,12 @@
 #include <iterator>  // iterator_traits
 #include <exception> // runtime_error
 #include <cmath>     // pow10
+#include <istream>
+#include <sstream>
 
 #include "gsl_util.h"
 
 namespace mnb { namespace hmm {
-
-  template<typename _Tp, std::size_t N, std::size_t M>
-  using matrix = std::array<std::array<_Tp, M>, N>;
 
   struct matrix_read_error: public std::runtime_error {
       matrix_read_error(std::string arg) :
@@ -28,6 +27,68 @@ namespace mnb { namespace hmm {
       }
   };
 
+  namespace array {
+
+  template<typename _Tp, std::size_t N, std::size_t M>
+  using matrix = std::array<std::array<_Tp, M>, N>;
+
+  }
+
+  namespace vector {
+
+    template<typename _Tp>
+    using matrix = std::vector<std::vector<_Tp>>;
+
+    namespace detail {
+
+    inline std::istringstream &getline(std::istream& in, std::istringstream& linestream)
+    {
+      std::string line;
+      std::getline(in, line);
+      linestream.str(line);
+      linestream.clear();
+      return linestream;
+    }
+
+    }
+
+    template <class T>
+    matrix<T>
+    read_matrix(std::istream& in, std::size_t rows, std::size_t cols)
+    {
+      Expects(rows > 0);
+      Expects(cols > 0);
+      matrix<T> mat(rows, std::vector<T>(cols));
+      assert(mat.size() == rows);
+      assert(std::all_of(mat.begin(), mat.end(),
+          [](std::vector<T> const& row) { return row.size() == cols; }));
+      std::istringstream line;
+      for (std::size_t i = 0; i < rows; ++i) {
+        detail::getline(in, line);
+        for (std::size_t j = 0; j < cols; ++j)
+          if (!(line >> mat[i][j]))
+            throw matrix_read_error("error while reading matrix entries.");
+      }
+      return mat;
+    }
+
+    template <class T>
+    std::vector<T>
+    read_array(std::istream& in, std::size_t max_n)
+    {
+      Expects(max_n > 0);
+      std::vector<T> v(max_n);
+      std::istringstream line;
+      detail::getline(in, line);
+      assert(v.size() == max_n);
+      for (std::size_t i = 0; i < max_n; ++i)
+        if (!(line >> v[i]))
+          throw matrix_read_error("error while reading vector entries.");
+      return v;
+    }
+
+  }
+
 }
 
 template <bool B, typename T = void>
@@ -37,7 +98,7 @@ using enable_if_t = typename std::enable_if<B, T>::type;
 
 template<typename _Tp, std::size_t N, std::size_t M>
 std::istream& operator>>(std::istream& in,
-    mnb::hmm::matrix<_Tp,N,M>& matrix)
+    mnb::hmm::array::matrix<_Tp,N,M>& matrix)
 {
   std::istringstream linestream;
   std::string line;
@@ -60,7 +121,7 @@ std::istream& operator>>(std::istream& in,
 
 template<typename _Tp, std::size_t N, std::size_t M>
 std::ostream& operator<<(std::ostream& out,
-    mnb::hmm::matrix<_Tp,N,M> const& matrix)
+    mnb::hmm::array::matrix<_Tp,N,M> const& matrix)
 {
   if (!out)
     throw mnb::hmm::matrix_write_error(
@@ -79,7 +140,7 @@ namespace mnb { namespace hmm {
   InputIter
   find_by_distribution(InputIter start, InputIter end, Float X)
   noexcept {
-      Float P_fn { 0.0 };
+      Float P_fn { 0.0f };
     while (!(start == end)) {
       P_fn += *start;
       if (P_fn < X)
@@ -96,7 +157,7 @@ namespace mnb { namespace hmm {
   template<typename _Tp>
   inline bool is_nonnegative(_Tp value) noexcept
   {
-    return !(value < 0.0);
+    return !(value < 0.0f);
   }
 
   template <typename _floatT, std::size_t accuracy = 15>
@@ -109,29 +170,127 @@ namespace mnb { namespace hmm {
   /**
    * @brief Checks if a given array is nonnegative and normed to one.
    */
-  template<typename _floatT, std::size_t N, std::size_t accuracy = 15>
+  template<class _containerT, std::size_t accuracy = 15>
   inline bool
-  is_probability_array(std::array<_floatT, N> const& p) noexcept
+  is_probability_array(_containerT const& p) noexcept
   {
+    using _floatT = typename _containerT::value_type;
     const _floatT eps = pow10(-gsl::narrow<int>(accuracy));
     bool entries_are_nonnegative = std::all_of(
         begin(p), end(p), is_nonnegative<_floatT>);
-    _floatT total_sum = std::accumulate(begin(p), end(p), 0.0);
-    bool array_is_normed = std::abs(total_sum - 1.0) < eps;
+    _floatT total_sum = std::accumulate(begin(p), end(p), 0.0f);
+    bool array_is_normed = is_almost_equal(total_sum, 1.0f);
     return entries_are_nonnegative && array_is_normed;
   }
 
   /**
    * @brief Checks if every entry nonnegative and every row is normed to one.
    */
-  template<typename _floatT, std::size_t N, std::size_t M,
-    std::size_t accuracy = 15>
+  template<class _containerT, std::size_t accuracy = 15>
   inline bool
-  is_right_stochastic_matrix(matrix<_floatT,N,M> const &matrix) noexcept
+  is_right_stochastic_matrix(_containerT const& matrix) noexcept
   {
     return std::all_of(begin(matrix), end(matrix),
-        is_probability_array<_floatT, M, accuracy>);
+        is_probability_array<typename _containerT::value_type, accuracy>);
   }
+
+  template <class _arrayT>
+  inline _arrayT
+  make_array_like(_arrayT const& other)
+  {
+    std::cerr << "called make_array_like<_arrayT> version\n";
+    return _arrayT(other);
+  }
+
+  template<class T, std::size_t N>
+  inline std::array<T,N>
+  make_array_like(std::array<T,N> const& other) noexcept
+  {
+    std::cerr << "called make_array_like<std::array<T,N>> version\n";
+    return std::array<T,N>();
+  }
+
+  template <class T>
+  inline std::vector<T>
+  make_array_like(std::vector<T> const& other)
+  {
+    std::cerr << "called make_array_like<std::vector<T>> version\n";
+    return std::vector<T>(other.size());
+  }
+
+  template <class InputIter, class OutputIter, class HMM,
+      class transition_matrix = typename HMM::transition_matrix_type,
+      class symbols_matrix = typename HMM::symbols_matrix_type,
+      class array_type = typename HMM::array_type,
+      class float_type = typename HMM::float_type>
+  void forward_with_initial(
+      InputIter start, InputIter end, OutputIter out, HMM const& hmm,
+      array_type const& alpha_0)
+  {
+    // get HMM properties
+    transition_matrix const& A = hmm.transition_matrix();
+    symbols_matrix const& B = hmm.symbol_probabilities();
+    // do the recursion
+    array_type pred_alpha(alpha_0);
+    array_type alpha = make_array_like(alpha_0);
+    while (!(start == end)) {
+      std::size_t ob = *start;
+      assert(0 <= ob && ob < hmm.symbols());
+      float_type scaling = 0.0;
+      for (std::size_t j = 0; j < hmm.states(); ++j) {
+        alpha[j] = 0.0;
+        for (std::size_t i = 0; i < hmm.states(); ++i)
+          alpha[j] += pred_alpha[i]*A[i][j];
+        alpha[j] *= B[j][ob];
+        scaling += alpha[j];
+      }
+      assert(scaling > 0);
+      assert(is_almost_equal(
+          scaling, std::accumulate(alpha.begin(), alpha.end(), 0.0f)));
+      std::transform(alpha.begin(), alpha.end(), alpha.begin(),
+          [scaling](float_type a){ return a / scaling; });
+      *out = std::make_pair(1/scaling, alpha);
+      std::swap(alpha, pred_alpha);
+      ++out;
+      ++start;
+    }
+  }
+
+  template <class InputIter, class OutputIter, class HMM,
+        class transition_matrix = typename HMM::transition_matrix_type,
+        class symbols_matrix = typename HMM::symbols_matrix_type,
+        class array_type = typename HMM::array_type,
+        class float_type = typename HMM::float_type>
+  void
+  forward(InputIter start, InputIter end, OutputIter out, HMM const& hmm)
+  {
+    if (start == end)
+      return;
+    // get HMM properties
+    symbols_matrix const& B = hmm.symbol_probabilities();
+    array_type const& pi = hmm.initial_distribution();
+    // determine initial alpha_0
+    std::size_t ob = *start;
+    assert(0 <= ob && ob < hmm.symbols());
+    array_type alpha = make_array_like(pi);
+    float_type scaling{ 0.0 };
+    for (std::size_t i=0; i < hmm.states(); ++i) {
+      alpha[i] = pi[i]*B[i][ob];
+      scaling += alpha[i];
+    }
+    assert(scaling > 0);
+    assert(is_almost_equal(
+        scaling, std::accumulate(alpha.begin(), alpha.end(), 0.0f)));
+    std::transform(alpha.begin(), alpha.end(), alpha.begin(),
+        [scaling](float_type a){ return a / scaling; });
+    *out = std::make_pair(1/scaling, alpha);
+    ++out;
+    ++start;
+
+    // start the recursion formula with our initial alpha_0
+    forward_with_initial(start, end, out, hmm, alpha);
+  }
+
 
 } // namespace hmm
 } // namespace nmb

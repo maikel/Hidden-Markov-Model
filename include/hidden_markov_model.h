@@ -10,8 +10,16 @@
 namespace mnb { namespace hmm {
 
   struct not_probability_arrays: public std::runtime_error {
-      not_probability_arrays(std::string arg): std::runtime_error(arg) {}
+      not_probability_arrays(std::string const& arg)
+          : std::runtime_error(arg) {}
   };
+
+  struct dimensions_not_consistent: public std::runtime_error {
+      dimensions_not_consistent(std::string const& arg)
+          : std::runtime_error(arg) {}
+  };
+
+  namespace array {
 
   template <class _floatT,
     std::size_t _NumStates, std::size_t _NumSymbols, typename =
@@ -19,11 +27,14 @@ namespace mnb { namespace hmm {
   struct hidden_markov_model
   {
       using float_type = _floatT;
+      using transition_matrix_type = matrix<float_type,_NumStates,_NumStates>;
+      using symbols_matrix_type = matrix<float_type,_NumStates,_NumSymbols>;
+      using array_type = std::array<float_type,_NumStates>;
 
       hidden_markov_model(
-          matrix<float_type,_NumStates,_NumStates> const& _A,
-          matrix<float_type,_NumStates,_NumSymbols> const& _B,
-          std::array<float_type,_NumStates> const& _pi)
+          transition_matrix_type const& _A,
+          symbols_matrix_type const& _B,
+          array_type const& _pi)
       : A(_A), B(_B), pi(_pi) {
         if (!is_right_stochastic_matrix(A) ||
             !is_right_stochastic_matrix(B) ||
@@ -40,67 +51,88 @@ namespace mnb { namespace hmm {
         return _NumSymbols;
       }
 
+      inline transition_matrix_type const&
+      transition_matrix() const noexcept { return A; }
+      inline symbols_matrix_type const&
+      symbol_probabilities() const noexcept { return B; }
+      inline array_type const&
+      initial_distribution() const noexcept { return pi; }
+
       template <class InputIter, class OutputIter>
-      void forward(InputIter start, InputIter end, OutputIter out) const
+      inline void forward(InputIter start, InputIter end, OutputIter out)
       {
-        if (start == end)
-          return;
-
-        constexpr std::size_t N = states();
-
-        // determine alpha_0
-        std::size_t ob = *start;
-        assert(0 <= ob && ob < symbols());
-        std::array<float_type, N> alpha;
-        float_type scaling{ 0.0 };
-        for (std::size_t i=0; i < N; ++i) {
-          alpha[i] = pi[i]*B[i][ob];
-          scaling += alpha[i];
-        }
-        assert(scaling > 0);
-        assert(is_almost_equal(
-            scaling, std::accumulate(alpha.begin(), alpha.end(), 0.0f)));
-        std::transform(alpha.begin(), alpha.end(), alpha.begin(),
-            [scaling](float_type a){ return a / scaling; });
-        *out = std::make_pair(1/scaling, alpha);
-        ++out;
-        ++start;
-
-        // do the recursion
-        std::array<float_type, N> pred_alpha(alpha);
-        while (!(start == end)) {
-          ob = *start;
-          assert(0 <= ob && ob < symbols());
-          scaling = 0.0;
-          for (std::size_t i = 0; i < N; ++i) {
-            alpha[i] = 0.0;
-            for (std::size_t j = 0; j < N; ++j)
-              alpha[i] += pred_alpha[j]*A[j][i];
-            alpha[i] *= B[i][ob];
-            scaling += alpha[i];
-          }
-          assert(scaling > 0);
-          assert(is_almost_equal(
-              scaling, std::accumulate(alpha.begin(), alpha.end(), 0.0f)));
-          std::transform(alpha.begin(), alpha.end(), alpha.begin(),
-              [scaling](float_type a){ return a / scaling; });
-          *out = std::make_pair(1/scaling, alpha);
-          std::swap(alpha, pred_alpha);
-          ++out;
-          ++start;
-        }
+        ::mnb::hmm::forward(start, end, out, *this);
       }
 
-      matrix<float_type,_NumStates,_NumStates> A;
-      matrix<float_type,_NumStates,_NumSymbols> B;
-      std::array<float_type,_NumStates> pi;
+      transition_matrix_type A;
+      symbols_matrix_type B;
+      array_type pi;
   };
 
+  }
+
+  namespace vector {
+
+  template <class _floatT, typename =
+        typename std::enable_if<std::is_floating_point<_floatT>::value>::type>
+  struct hidden_markov_model
+  {
+      using float_type = _floatT;
+      using transition_matrix_type = matrix<float_type>;
+      using symbols_matrix_type = matrix<float_type>;
+      using array_type = std::vector<float_type>;
+
+      hidden_markov_model(
+          transition_matrix_type const& _A,
+          symbols_matrix_type const& _B,
+          array_type const& _pi)
+      : A(_A), B(_B), pi(_pi), _NumStates(A.size()), _NumSymbols(B[0].size()) {
+        if (!is_right_stochastic_matrix(A) ||
+            !is_right_stochastic_matrix(B) ||
+            !is_probability_array(pi))
+          throw not_probability_arrays("Some inputs in constructor do not " \
+              "have a stochastical property.");
+        if (A.size() != B.size() || A.size() != pi.size())
+          throw dimensions_not_consistent("Dimensions of input matrices are " \
+              "not consistent with each other.");
+      }
+      virtual ~hidden_markov_model() = default;
+
+      inline std::size_t states() const noexcept {
+        return _NumStates;
+      }
+      inline constexpr std::size_t symbols() const noexcept {
+        return _NumSymbols;
+      }
+
+      inline transition_matrix_type const&
+      transition_matrix() const noexcept { return A; }
+      inline symbols_matrix_type const&
+      symbol_probabilities() const noexcept { return B; }
+      inline array_type const&
+      initial_distribution() const noexcept { return pi; }
+
+      template <class InputIter, class OutputIter>
+      inline void forward(InputIter start, InputIter end, OutputIter out)
+      {
+        ::mnb::hmm::forward(start, end, out, *this);
+      }
+
+      transition_matrix_type A;
+      symbols_matrix_type B;
+      array_type pi;
+      std::size_t _NumStates;
+      std::size_t _NumSymbols;
+  };
+
+  }
+
   namespace detail {
-    template <class Float, std::size_t N, std::size_t M>
+    template <class hidden_markov_model,
+              class Float = typename hidden_markov_model::float_type>
     class sequence_generator {
       public:
-        sequence_generator(hidden_markov_model<Float,N,M> const& hmm)
+        sequence_generator(hidden_markov_model const& hmm)
         noexcept: m_engine(std::random_device()()), m_hmm(hmm)
         {
           Float X = uniform(m_engine);
@@ -134,16 +166,17 @@ namespace mnb { namespace hmm {
         std::default_random_engine m_engine;
         std::uniform_real_distribution<Float> uniform {0, 1};
         // current context variables
-        const hidden_markov_model<Float,N,M>& m_hmm;
+        const hidden_markov_model& m_hmm;
         std::size_t m_current_state;
     };
   }
 
-  template <class Float, std::size_t N, std::size_t M>
-  detail::sequence_generator<Float,N,M> make_generator(
-      hidden_markov_model<Float,N,M> const& hmm)
+  template <class hidden_markov_model,
+            class Float = typename hidden_markov_model::float_type>
+  detail::sequence_generator<hidden_markov_model> make_generator(
+      hidden_markov_model const& hmm)
   {
-      return detail::sequence_generator<Float,N,M>(hmm);
+      return detail::sequence_generator<hidden_markov_model>(hmm);
   }
 
 } // namespace hmm
