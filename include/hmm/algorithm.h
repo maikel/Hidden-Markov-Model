@@ -197,7 +197,6 @@ namespace mnb { namespace hmm {
   inline _arrayT
   make_array_like(_arrayT const& other)
   {
-    std::cerr << "called make_array_like<_arrayT> version\n";
     return _arrayT(other);
   }
 
@@ -205,7 +204,6 @@ namespace mnb { namespace hmm {
   inline std::array<T,N>
   make_array_like(std::array<T,N> const& other) noexcept
   {
-    std::cerr << "called make_array_like<std::array<T,N>> version\n";
     return std::array<T,N>();
   }
 
@@ -213,7 +211,6 @@ namespace mnb { namespace hmm {
   inline std::vector<T>
   make_array_like(std::vector<T> const& other)
   {
-    std::cerr << "called make_array_like<std::vector<T>> version\n";
     return std::vector<T>(other.size());
   }
 

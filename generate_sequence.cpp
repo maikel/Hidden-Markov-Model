@@ -14,7 +14,6 @@ enum Exit_Error_Codes {
   exit_argument_error = 3
 };
 
-
 std::istream& getline(std::istream& in, std::istringstream& line_stream)
 {
   std::string line;
@@ -78,11 +77,11 @@ int main(int argc, char *argv[])
   }
 
   mnb::hmm::vector::hidden_markov_model<float> hmm(A, B, pi);
-  std::function<std::size_t()> generator = mnb::hmm::make_generator(hmm);
+  std::function<uint8_t()> generator = mnb::hmm::make_generator(hmm);
   std::cout << obslen << "\n";
   std::copy(boost::make_function_input_iterator(generator, std::size_t{0}),
             boost::make_function_input_iterator(generator, obslen),
-            std::ostream_iterator<std::size_t>(std::cout, " "));
+            std::ostream_iterator<uint8_t>(std::cout, " "));
   std::cout << std::endl;
 
   return exit_success;

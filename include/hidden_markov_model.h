@@ -26,10 +26,10 @@ namespace mnb { namespace hmm {
         typename std::enable_if<std::is_floating_point<_floatT>::value>::type>
   struct hidden_markov_model
   {
-      using float_type = _floatT;
+      using float_type             = _floatT;
       using transition_matrix_type = matrix<float_type,_NumStates,_NumStates>;
-      using symbols_matrix_type = matrix<float_type,_NumStates,_NumSymbols>;
-      using array_type = std::array<float_type,_NumStates>;
+      using symbols_matrix_type    = matrix<float_type,_NumStates,_NumSymbols>;
+      using array_type             = std::array<float_type,_NumStates>;
 
       hidden_markov_model(
           transition_matrix_type const& _A,
@@ -59,7 +59,7 @@ namespace mnb { namespace hmm {
       initial_distribution() const noexcept { return pi; }
 
       template <class InputIter, class OutputIter>
-      inline void forward(InputIter start, InputIter end, OutputIter out)
+      inline void forward(InputIter start, InputIter end, OutputIter out) const
       {
         ::mnb::hmm::forward(start, end, out, *this);
       }
@@ -77,10 +77,10 @@ namespace mnb { namespace hmm {
         typename std::enable_if<std::is_floating_point<_floatT>::value>::type>
   struct hidden_markov_model
   {
-      using float_type = _floatT;
+      using float_type             = _floatT;
       using transition_matrix_type = matrix<float_type>;
-      using symbols_matrix_type = matrix<float_type>;
-      using array_type = std::vector<float_type>;
+      using symbols_matrix_type    = matrix<float_type>;
+      using array_type             = std::vector<float_type>;
 
       hidden_markov_model(
           transition_matrix_type const& _A,
@@ -118,7 +118,7 @@ namespace mnb { namespace hmm {
       initial_distribution() const noexcept { return pi; }
 
       template <class InputIter, class OutputIter>
-      inline void forward(InputIter start, InputIter end, OutputIter out)
+      inline void forward(InputIter start, InputIter end, OutputIter out) const
       {
         ::mnb::hmm::forward(start, end, out, *this);
       }

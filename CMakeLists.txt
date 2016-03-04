@@ -5,3 +5,4 @@ include_directories(include GSL/include)
 set(CMAKE_CXX_FLAGS "-std=c++1y -O3 -Wall -DNDEBUG")
 
 add_executable(generate_sequence generate_sequence.cpp)
+add_executable(forward forward.cpp)
