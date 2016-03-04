@@ -160,35 +160,34 @@ namespace mnb { namespace hmm {
     return !(value < 0.0f);
   }
 
-  template <typename _floatT, std::size_t accuracy = 15>
-  inline bool is_almost_equal(_floatT a, _floatT b) noexcept
+  template <typename _floatT, std::size_t accuracy = 4>
+  inline bool is_almost_equal(_floatT a, _floatT b)
   {
     const _floatT eps = pow10(-gsl::narrow<int>(accuracy));
-    return std::abs(a-b) < eps;
+    return (std::abs(a-b) < eps);
   }
 
   /**
    * @brief Checks if a given array is nonnegative and normed to one.
    */
-  template<class _containerT, std::size_t accuracy = 15>
+  template<class _containerT, std::size_t accuracy = 4>
   inline bool
-  is_probability_array(_containerT const& p) noexcept
+  is_probability_array(_containerT const& p)
   {
     using _floatT = typename _containerT::value_type;
-    const _floatT eps = pow10(-gsl::narrow<int>(accuracy));
     bool entries_are_nonnegative = std::all_of(
         begin(p), end(p), is_nonnegative<_floatT>);
     _floatT total_sum = std::accumulate(begin(p), end(p), 0.0f);
-    bool array_is_normed = is_almost_equal(total_sum, 1.0f);
+    bool array_is_normed = is_almost_equal<_floatT, accuracy>(total_sum, 1.0f);
     return entries_are_nonnegative && array_is_normed;
   }
 
   /**
    * @brief Checks if every entry nonnegative and every row is normed to one.
    */
-  template<class _containerT, std::size_t accuracy = 15>
+  template<class _containerT, std::size_t accuracy = 4>
   inline bool
-  is_right_stochastic_matrix(_containerT const& matrix) noexcept
+  is_right_stochastic_matrix(_containerT const& matrix)
   {
     return std::all_of(begin(matrix), end(matrix),
         is_probability_array<typename _containerT::value_type, accuracy>);

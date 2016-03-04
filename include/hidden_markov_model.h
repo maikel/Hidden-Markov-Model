@@ -89,9 +89,14 @@ namespace mnb { namespace hmm {
       : A(_A), B(_B), pi(_pi), _NumStates(A.size()), _NumSymbols(B[0].size()) {
         if (!is_right_stochastic_matrix(A) ||
             !is_right_stochastic_matrix(B) ||
-            !is_probability_array(pi))
+            !is_probability_array(pi)) {
+          std::cout << std::boolalpha
+                    << is_right_stochastic_matrix(A) << "\n"
+                    << is_right_stochastic_matrix(B) << "\n"
+                    << is_probability_array(pi) << "\n";
           throw not_probability_arrays("Some inputs in constructor do not " \
-              "have a stochastical property.");
+              "have the stochastical property.");
+        }
         if (A.size() != B.size() || A.size() != pi.size())
           throw dimensions_not_consistent("Dimensions of input matrices are " \
               "not consistent with each other.");
