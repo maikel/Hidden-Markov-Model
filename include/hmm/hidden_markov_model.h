@@ -87,10 +87,10 @@ namespace maikel { namespace hmm {
             scaling += alpha_0(i);
           }
           assert(scaling > 0);
-          assert(almost_equal(scaling, alpha_0.sum(), 1));
+          assert(almost_equal<float_type>(scaling, alpha_0.sum(), 1));
           scaling = 1/scaling;
           alpha_0 *= scaling;
-          assert(almost_equal(alpha_0.sum(), 1.0, 1));
+          assert(almost_equal<float_type>(alpha_0.sum(), 1.0, 1));
 
           // write data to output iterators and go to next observation
           *alphaout = alpha_0;
@@ -123,17 +123,24 @@ namespace maikel { namespace hmm {
             for (index_type j = 0; j < states(); ++j) {
               alpha(j) = 0.0;
               for (index_type i = 0; i < states(); ++i)
-                alpha(i) += prev_alpha(i)*A(i,j);
+                alpha(j) += prev_alpha(i)*A(i,j);
               alpha(j) *= B(j,ob);
               scaling += alpha(j);
             }
 
+//            std::cerr << "A:\n" << A << std::endl;
+//            std::cerr << "B:\n" << B << std::endl;
+//            std::cerr << "ob: " << ob << std::endl;
+//            std::cerr << "scaling: " << scaling << std::endl;
+//            std::cerr << "prev_alpha: " << prev_alpha << std::endl;
+//            std::cerr << "alpha: " << alpha << std::endl;
+
             // scaling with assertions
             assert(scaling > 0);
-            assert(almost_equal(scaling, alpha.sum(), 1));
-            scaling = 1 / scaling;
+            assert(almost_equal<float_type>(scaling, alpha.sum(), 1));
+            scaling = !scaling ? 0 : 1 / scaling;
             alpha *= scaling;
-            assert(almost_equal(alpha.sum(), 1.0, 1));
+            assert(almost_equal<float_type>(alpha.sum(), 1.0, 1));
 
             // write to output
             *alphaout = alpha;

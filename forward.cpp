@@ -2,6 +2,7 @@
 #include <chrono>
 #include <vector>
 #include <fstream>
+#include <functional>
 
 #include <boost/iterator/transform_iterator.hpp>
 
@@ -64,13 +65,30 @@ int main(int argc, char *argv[])
   end = std::chrono::system_clock::now();
   dt = end-start;
   std::cout << " time duration: " << dt.count() << "ms.\n";
-
   std::cout << "Sequence size in memory: "
-            << sequence.capacity()*sizeof(symbol_type)/1024/1024 << " mega bytes.";
-  std::cout << std::endl;
+            << sequence.capacity()*sizeof(symbol_type) << " bytes.\n";
 
-//  std::copy(sequence.begin(), sequence.end(), std::ostream_iterator<uint8_t>(std::cout, " "));
-//  std::cout << std::endl;
+  // prepare alpha vector
+  using alpha_type = decltype(model)::vector_type;
+  std::vector<float> scaling;
+  scaling.reserve(sequence.size());
+  std::vector<alpha_type> alphas;
+  alphas.reserve(sequence.size());
+  std::cout << "Starting forward algorithm ... " << std::flush;
+  start = std::chrono::system_clock::now();
+  model.forward(sequence.begin(), sequence.end(), std::back_inserter(alphas), std::back_inserter(scaling));
+  end = std::chrono::system_clock::now();
+  dt = end-start;
+  std::cout << " time duration: " << dt.count() << "ms.\n";
+
+  auto logarithm = [](float x) { return std::log(x); };
+  float P = std::accumulate(
+      boost::make_transform_iterator(scaling.begin(), logarithm),
+      boost::make_transform_iterator(scaling.end(), logarithm), 0.0f);
+  std::cout << -P << std::endl;
+
+  std::cout << "alpha (last 10):\n";
+  std::copy(alphas.rbegin(), alphas.rbegin()+10, std::ostream_iterator<alpha_type>(std::cout,"\n"));
 
   return exit_success;
 }
