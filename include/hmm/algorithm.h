@@ -218,19 +218,24 @@ namespace mnb { namespace hmm {
       class transition_matrix = typename HMM::transition_matrix_type,
       class symbols_matrix = typename HMM::symbols_matrix_type,
       class array_type = typename HMM::array_type,
-      class float_type = typename HMM::float_type>
+      class float_type = typename HMM::float_type,
+      class symbol_type = typename InputIter::value_type>
   void forward_with_initial(
-      InputIter start, InputIter end, OutputIter out, HMM const& hmm,
-      array_type const& alpha_0)
+      InputIter start,
+      InputIter end,
+      OutputIter out,
+      HMM const& hmm,
+      array_type pred_alpha)
   {
+    if (start == end)
+      return;
     // get HMM properties
     transition_matrix const& A = hmm.transition_matrix();
     symbols_matrix const& B = hmm.symbol_probabilities();
     // do the recursion
-    array_type pred_alpha(alpha_0);
-    array_type alpha = make_array_like(alpha_0);
+    array_type alpha = make_array_like(pred_alpha);
     while (!(start == end)) {
-      std::size_t ob = *start;
+      symbol_type ob = *start;
       assert(0 <= ob && ob < hmm.symbols());
       float_type scaling = 0.0;
       for (std::size_t j = 0; j < hmm.states(); ++j) {
@@ -256,7 +261,8 @@ namespace mnb { namespace hmm {
         class transition_matrix = typename HMM::transition_matrix_type,
         class symbols_matrix = typename HMM::symbols_matrix_type,
         class array_type = typename HMM::array_type,
-        class float_type = typename HMM::float_type>
+        class float_type = typename HMM::float_type,
+        class symbol_type = typename InputIter::value_type>
   void
   forward(InputIter start, InputIter end, OutputIter out, HMM const& hmm)
   {
@@ -266,7 +272,7 @@ namespace mnb { namespace hmm {
     symbols_matrix const& B = hmm.symbol_probabilities();
     array_type const& pi = hmm.initial_distribution();
     // determine initial alpha_0
-    std::size_t ob = *start;
+    symbol_type ob = *start;
     assert(0 <= ob && ob < hmm.symbols());
     array_type alpha = make_array_like(pi);
     float_type scaling{ 0.0 };
@@ -285,6 +291,90 @@ namespace mnb { namespace hmm {
 
     // start the recursion formula with our initial alpha_0
     forward_with_initial(start, end, out, hmm, alpha);
+  }
+
+  template <
+        class ObInputIter,
+        class ScalingInputIter,
+        class OutputIter,
+        class HMM,
+        class transition_matrix = typename HMM::transition_matrix_type,
+        class symbols_matrix = typename HMM::symbols_matrix_type,
+        class array_type = typename HMM::array_type,
+        class float_type = typename HMM::float_type,
+        class symbol_type = typename ObInputIter::value_type>
+  void
+  backward_with_initial(
+      ObInputIter start,
+      ObInputIter end,
+      ScalingInputIter scalit,
+      OutputIter out,
+      HMM const& hmm,
+      array_type next_beta)
+  {
+    if (start == end)
+      return;
+    // get HMM properties
+    transition_matrix const& A = hmm.transition_matrix();
+    symbols_matrix const& B = hmm.symbol_probabilities();
+    array_type beta = make_array_like(next_beta);
+    assert(beta.size() == hmm.states());
+    while (!(start == end)) {
+      symbol_type ob = *start;
+      assert(0 <= ob && ob < hmm.symbols());
+      float_type scaling = *scalit;
+      assert(scaling > 0);
+      for (std::size_t i = 0; i < hmm.states(); ++i) {
+        beta[i] = 0.0;
+        for (std::size_t j = 0; j < hmm.states(); ++j)
+          beta[i] += A[i][j]*B[j][ob]*next_beta[j];
+        beta[i] *= scaling;
+      }
+      *out = beta;
+      std::swap(beta, next_beta);
+      ++out;
+      ++start;
+      ++scalit;
+    }
+  }
+
+  template <
+        class ObInputIter,
+        class ScalingInputIter,
+        class OutputIter,
+        class HMM,
+        class transition_matrix = typename HMM::transition_matrix_type,
+        class symbols_matrix = typename HMM::symbols_matrix_type,
+        class array_type = typename HMM::array_type,
+        class float_type = typename HMM::float_type,
+        class symbol_type = typename ObInputIter::value_type>
+  void
+  backward(
+      ObInputIter start,
+      ObInputIter end,
+      ScalingInputIter scalit,
+      OutputIter out,
+      HMM const& hmm)
+  {
+    if (start == end)
+      return;
+    // get HMM properties
+    symbols_matrix const& B = hmm.symbol_probabilities();
+    array_type const& pi = hmm.initial_distribution();
+    // determine initial beta_T
+    array_type beta = make_array_like(pi);
+    assert(beta.size() == hmm.states());
+    float_type scaling = *scalit;
+    assert(scaling > 0);
+    for (std::size_t i=0; i < hmm.states(); ++i) {
+      beta[i] = scaling;
+    }
+    *out = beta;
+    ++out;
+    ++scalit;
+
+    // start the recursion formula with our initial alpha_0
+    backward_with_initial(start, end, scalit, out, hmm, beta);
   }
 
 

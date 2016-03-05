@@ -123,6 +123,13 @@ namespace mnb { namespace hmm {
         ::mnb::hmm::forward(start, end, out, *this);
       }
 
+      template <class ObInputIter, class OutputIter, class ScalInputIter>
+      inline void backward(ObInputIter start, ObInputIter end,
+          ScalInputIter scalit, OutputIter out)
+      {
+        ::mnb::hmm::backward(start, end, scalit, out, *this);
+      }
+
       transition_matrix_type A;
       symbols_matrix_type B;
       array_type pi;
