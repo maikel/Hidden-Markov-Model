@@ -5,6 +5,6 @@ include_directories("${PROJECT_SOURCE_DIR}/third_party/eigen"
                     "${PROJECT_SOURCE_DIR}/third_party/GSL/include"
                     "${PROJECT_SOURCE_DIR}/include")
 
-add_compile_options( -Wall -std=c++1y )
+add_compile_options( -Wall -O3 -std=c++1y -DNDEBUG )
 add_executable(generate_sequence generate_sequence.cpp)
-# add_executable(forward forward.cpp)
+add_executable(forward forward.cpp)

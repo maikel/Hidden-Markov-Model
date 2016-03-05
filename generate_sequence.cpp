@@ -51,11 +51,12 @@ int main(int argc, char *argv[])
     return exit_argument_error;
   }
 
-  std::function<std::size_t()> generator = maikel::hmm::make_sequence_generator(model);
+  using Index = decltype(model)::index_type;
+  std::function<Index()> generator = maikel::hmm::make_sequence_generator(model);
   std::cout << obslen << "\n";
   std::copy(boost::make_function_input_iterator(generator, std::size_t{0}),
             boost::make_function_input_iterator(generator, obslen),
-            std::ostream_iterator<std::size_t>(std::cout, " "));
+            std::ostream_iterator<Index>(std::cout, " "));
   std::cout << std::endl;
 
   return exit_success;

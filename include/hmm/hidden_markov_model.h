@@ -18,8 +18,8 @@
 #define HIDDEN_MARKOV_MODEL_H_
 
 #include <Eigen/Dense>
+#include "../types.h"
 
-#include "arithmetic.h"
 #include "stochastic_properties.h"
 #include "hmm/algorithm.h"
 
@@ -69,20 +69,81 @@ namespace maikel { namespace hmm {
       inline const vector_type&            initial_distribution() const noexcept { return pi; }
 
       template <class ObInputIter, class AlphaOutputIter, class ScalingOutputIter>
-        inline void forward(
-            ObInputIter start, ObInputIter end,                         // inputs
-            AlphaOutputIter alphaout, ScalingOutputIter scalout) const // outputs
-      {
-//        ::maikel::hmm::forward(start, end, alphaout, scalout, *this);
-      }
+        void forward(
+            ObInputIter ob_start, ObInputIter ob_end,                   // inputs
+            AlphaOutputIter alphaout, ScalingOutputIter scalout)        // outputs
+        const noexcept
+        {
+          if (ob_start == ob_end)
+            return;
 
-      template <class ObInputIter, class ScalInputIter, class BetaOutputIter>
-        inline void backward(
-            ObInputIter start, ObInputIter end, ScalInputIter scalin, // inputs
-            BetaOutputIter betaout) const                            // outputs
-      {
-//        ::maikel::hmm::backward(start, end, scalin, betaout, *this);
-      }
+          // get first observation and cacluate alpha_0
+          index_type ob = gsl::narrow<index_type>(*ob_start);
+          assert(0 <= ob && ob < symbols());
+          vector_type alpha_0(states());
+          float_type scaling { 0 };
+          for (index_type i = 0; i < states(); ++i) {
+            alpha_0(i) = pi(i)*B(i,ob);
+            scaling += alpha_0(i);
+          }
+          assert(scaling > 0);
+          assert(almost_equal(scaling, alpha_0.sum(), 1));
+          scaling = 1/scaling;
+          alpha_0 *= scaling;
+          assert(almost_equal(alpha_0.sum(), 1.0, 1));
+
+          // write data to output iterators and go to next observation
+          *alphaout = alpha_0;
+          *scalout  = scaling;
+          ++alphaout;
+          ++scalout;
+          ++ob_start;
+
+          // start recursion
+          forward_with_initial(ob_start, ob_end, alphaout, scalout, alpha_0);
+        }
+
+      template <class ObInputIter, class AlphaOutputIter, class ScalingOutputIter>
+        void forward_with_initial(
+            ObInputIter ob_start, ObInputIter ob_end,              // inputs
+            AlphaOutputIter alphaout, ScalingOutputIter scalout,   // outputs
+            vector_type const& prev_alpha)                        // algorithm start data
+        const noexcept
+        {
+          if (ob_start == ob_end)
+            return;
+
+          vector_type alpha(states());
+          while (!(ob_start == ob_end)) {
+            index_type ob = gsl::narrow<index_type>(*ob_start);
+            assert(0 <= ob && ob < symbols());
+
+            // do the recursion
+            float_type scaling { 0 };
+            for (index_type j = 0; j < states(); ++j) {
+              alpha(j) = 0.0;
+              for (index_type i = 0; i < states(); ++i)
+                alpha(i) += prev_alpha(i)*A(i,j);
+              alpha(j) *= B(j,ob);
+              scaling += alpha(j);
+            }
+
+            // scaling with assertions
+            assert(scaling > 0);
+            assert(almost_equal(scaling, alpha.sum(), 1));
+            scaling = 1 / scaling;
+            alpha *= scaling;
+            assert(almost_equal(alpha.sum(), 1.0, 1));
+
+            // write to output
+            *alphaout = alpha;
+            alpha.swap(prev_alpha);
+            *scalout = scaling;
+            ++alphaout;
+            ++scalout;
+            ++ob_start;
+          }
+        }
 
       struct hmm_errors: public std::runtime_error {
           hmm_errors(std::string s): std::runtime_error(s) {}

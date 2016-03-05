@@ -3,9 +3,10 @@
 #include <vector>
 #include <fstream>
 
-#include "hidden_markov_model.h"
 #include <boost/iterator/transform_iterator.hpp>
-#include "include/ostream_binary_iterator.h"
+
+#include "hmm/hidden_markov_model.h"
+#include "hmm/iodata.h"
 
 enum Exit_Error_Codes {
   exit_success = 0,
@@ -14,19 +15,16 @@ enum Exit_Error_Codes {
   exit_argument_error = 3
 };
 
-std::istream& getline(std::istream& in, std::istringstream& line_stream)
-{
-  std::string line;
-  std::getline(in, line);
-  line_stream.str(line);
-  line_stream.clear();
-  return in;
-}
-
-struct model_parse_error: public std::runtime_error {
-  model_parse_error(std::string arg): std::runtime_error(arg) {}
-};
-
+template <class size_type>
+  size_type get_sequence_length(std::istream& in)
+  {
+    std::string line;
+    std::getline(in, line);
+    std::istringstream linestream(line);
+    size_type length;
+    linestream >> length;
+    return length;
+  }
 
 int main(int argc, char *argv[])
 {
@@ -34,84 +32,45 @@ int main(int argc, char *argv[])
     std::cerr << "Usage: " << argv[0] << " <model.dat> <sequence.dat>\n";
     return exit_not_enough_arguments;
   }
-  std::ifstream input;
-  input.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+  // prepare some timer
+  std::chrono::system_clock::time_point start;
+  std::chrono::system_clock::time_point end;
+  std::chrono::duration<double, std::milli> dt;
 
-  // Model parameter which will be read in from the model data file.
-  std::size_t states;
-  std::size_t symbols;
-  maikel::hmm::vector::matrix<float> A;
-  maikel::hmm::vector::matrix<float> B;
-  std::vector<float> pi;
+  // read model
+  std::ifstream model_input("model.dat");
+  auto model = maikel::hmm::read_hidden_markov_model<float>(model_input);
 
-  // Try to read the HMM-model that will be to do the forward algorithm with
-  try {
-    std::istringstream line;
-    input.open(argv[1], std::ifstream::in);
-    getline(input, line);
-    if (!(line >> states >> symbols))
-      throw model_parse_error("Could not read number of states and symbols.");
-    A  = maikel::hmm::vector::read_matrix<float>(input, states, states);
-    B  = maikel::hmm::vector::read_matrix<float>(input, states, symbols);
-    pi = maikel::hmm::vector::read_array<float>(input, states);
-    input.close();
-  } catch (std::ifstream::failure& e) {
-    std::cerr << "Error while opening or reading from the model data file.\n";
-    std::cerr << "Error message is '" << e.what() << "'\n";
-    return exit_io_error;
-  } catch (model_parse_error& e) {
-    std::cerr << "Error while parsing the model data file.\n";
-    std::cerr << "Error message is '" << e.what() << "'\n";
-    return exit_io_error;
-  } catch (maikel::hmm::matrix_read_error& e) {
-    std::cerr << "Error while reading matrix or array data.\n";
-    std::cerr << "Error message is '" << e.what() << "'\n";
-    return exit_io_error;
-  }
-  maikel::hmm::vector::hidden_markov_model<float> hmm(A, B, pi);
+  // prepare reading observation sequence
+  using symbol_type = uint8_t;
+  using size_type   = std::vector<symbol_type>::size_type;
+  std::vector<symbol_type> sequence;
 
-  // prepare observation stream
-  input.clear();
-  input.exceptions(std::ifstream::badbit);
-  input.open(argv[2], std::ifstream::in);
-  std::string line;
-  getline(input, line); // remove first line (obs length information)
-  auto obs_input_begin = std::istream_iterator<std::size_t>(input);
-  auto obs_input_end   = std::istream_iterator<std::size_t>();
-  // read observation sequence into vector
-  std::vector<std::size_t> obs;
-  std::cout << "Reading observation sequence into vector ... " << std::flush;
-  auto start = std::chrono::system_clock::now();
-  std::copy(obs_input_begin, obs_input_end, std::back_inserter(obs));
-  auto end = std::chrono::system_clock::now();
-  std::chrono::duration<float, std::milli> dt = end-start;
-  input.close();
-  std::cout << "done. Time elapsed: " << dt.count() << "ms.\n";
-  std::cout << "size in memory of obs vector: "
-      << obs.capacity()*sizeof(decltype(obs)::value_type)/1024/1024 << " MB\n";
+  // read sequence size and reserve memory
+  std::ifstream sequence_input("sequence.dat");
+  size_type length = get_sequence_length<size_type>(sequence_input);
+  sequence.reserve(length);
 
-  std::vector<std::pair<float, std::vector<float>>> alphas;
-  alphas.reserve(obs.size());
-  std::cout << "Starting forward algorithm on sequence ... " << std::flush;
+  auto normalize = [] (symbol_type s) { return s - gsl::narrow<symbol_type>('0'); };
+  auto sequence_input_begin = boost::make_transform_iterator(
+      std::istream_iterator<symbol_type>(sequence_input), normalize);
+  auto sequence_input_end = boost::make_transform_iterator(
+      std::istream_iterator<symbol_type>(), normalize);
+
+  std::cout << "Read observation data ... " << std::flush;
   start = std::chrono::system_clock::now();
-  hmm.forward(obs.begin(), obs.end(), std::back_inserter(alphas));
+  // read seqeunce data from file into std::vector
+  std::copy(sequence_input_begin, sequence_input_end, std::back_inserter(sequence));
   end = std::chrono::system_clock::now();
   dt = end-start;
-  std::cout << "done. Time elapsed: " << dt.count() << "ms.\n";
+  std::cout << " time duration: " << dt.count() << "ms.\n";
 
-  std::vector<std::vector<float>> betas;
-  betas.reserve(obs.size());
-  auto first = [](std::pair<float, std::vector<float>> const& p) {
-    return p.first;
-  };
-  auto scaling_begin = boost::make_transform_iterator(alphas.rbegin(), first);
-  std::cout << "Starting backward algorithm on sequence ... " << std::flush;
-  start = std::chrono::system_clock::now();
-  hmm.backward(obs.rbegin(), --obs.rend(), scaling_begin,
-      std::back_inserter(betas));
-  end = std::chrono::system_clock::now();
-  dt = end-start;
-  std::cout << "done. Time elapsed: " << dt.count() << "ms.\n";
+  std::cout << "Sequence size in memory: "
+            << sequence.capacity()*sizeof(symbol_type)/1024/1024 << " mega bytes.";
+  std::cout << std::endl;
+
+//  std::copy(sequence.begin(), sequence.end(), std::ostream_iterator<uint8_t>(std::cout, " "));
+//  std::cout << std::endl;
 
   return exit_success;
 }

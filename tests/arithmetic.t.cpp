@@ -17,8 +17,8 @@
 #include <cmath>
 #include <limits>
 
+#include "../include/types.h"
 #include "hidden-markov-models.t.h"
-#include "arithmetic.h"
 
 namespace {
 

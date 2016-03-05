@@ -48,22 +48,18 @@ namespace maikel { namespace hmm {
           symbol_type operator()() noexcept
           {
             float_type X = m_uniform(m_engine);
-
             // get next symbol
-            ArrayX<float_type> B_row = m_hmm.B.row(m_current_state);
-            symbol_type symbol = find_by_distribution(B_row, X);
-
+            symbol_type symbol = find_by_distribution(m_hmm.B, m_current_state, X);
             // advance a state
-            ArrayX<float_type> A_row = m_hmm.A.row(m_current_state);
-            m_current_state = find_by_distribution(A_row, X);
-
+            m_current_state = find_by_distribution(m_hmm.A, m_current_state, X);
             return symbol;
           }
       };
   } // namespace detail
 
   template <class float_type>
-    detail::sequence_generator<float_type> make_sequence_generator(hidden_markov_model<float_type> const& hmm)
+    detail::sequence_generator<float_type>
+    make_sequence_generator(hidden_markov_model<float_type> const& hmm)
     {
       return detail::sequence_generator<float_type>(hmm);
     }

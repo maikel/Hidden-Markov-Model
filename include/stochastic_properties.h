@@ -15,7 +15,7 @@
  */
 
 #include <Eigen/Dense>
-#include "arithmetic.h"
+#include "types.h"
 
 #ifndef STOCHASTIC_PROPERTIES_H_
 #define STOCHASTIC_PROPERTIES_H_
