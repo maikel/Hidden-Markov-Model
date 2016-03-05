@@ -145,6 +145,63 @@ namespace maikel { namespace hmm {
           }
         }
 
+      template <class ObInputIter, class ScalingInputIter, class BetaOutputIter>
+        void backward(ObInputIter ob_start, ObInputIter ob_end, ScalingInputIter scalit, BetaOutputIter betaout)
+        const
+        {
+          if (ob_start == ob_end)
+            return;
+
+          // calculate initial beta_T
+          float_type scaling = *scalit;
+          assert(scaling > 0);
+          vector_type beta(states());
+          for (index_type i = 0; i < states(); ++i)
+            beta(i) = scaling;
+
+          // write beta_T to output iterator and advance iterators
+          *betaout = beta;
+          ++betaout;
+          ++scalit;
+
+          // go for recursion
+          backward_with_initial(ob_start, ob_end, scalit, betaout, beta);
+        }
+
+      template <class ObInputIter, class ScalingInputIter, class BetaOutputIter>
+        void backward_with_initial(
+            ObInputIter ob_start, ObInputIter ob_end, ScalingInputIter scalit,
+            BetaOutputIter betaout,
+            vector_type const& next_beta)
+        const
+        {
+          if (ob_start == ob_end)
+            return;
+
+          vector_type beta(states());
+          while (ob_start+1 != ob_end) {
+            index_type ob = gsl::narrow<index_type>(*ob_start);
+            assert(0 <= ob && ob < symbols());
+
+            // do the recursion
+            float scaling = *scalit;
+            assert(scaling > 0);
+            for (index_type i = 0; i < states(); ++i) {
+              beta(i) = 0.0;
+              for (index_type j = 0; j < states(); ++j)
+                beta(i) += A(i,j)*B(j,ob)*next_beta(j);
+              beta(i) *= scaling;
+            }
+
+            // write to output and increment iterators
+            *betaout = beta;
+            beta.swap(next_beta);
+            ++betaout;
+            ++ob_start;
+            ++scalit;
+          }
+        }
+
       struct hmm_errors: public std::runtime_error {
           hmm_errors(std::string s): std::runtime_error(s) {}
       };

@@ -44,6 +44,33 @@ CASE ( "Test forward algorithm for test case in Rabiners Paper" ) {
   EXPECT(maikel::almost_equal<float>(probability,(1.536/10000),1));
 }
 
+CASE ( "Test forward and backward algorithms for test case in Rabiners Paper" ) {
+  Eigen::Matrix3f A;
+  A << 0.4, 0.3, 0.3,
+       0.2, 0.6, 0.2,
+       0.1, 0.1, 0.8;
+  Eigen::Matrix3f B;
+  B << 1.0, 0.0, 0.0,
+       0.0, 1.0, 0.0,
+       0.0, 0.0, 1.0;
+  Eigen::Vector3f pi;
+  pi << 0.0, 0.0, 1.0;
+  std::vector<int> sequence { 2, 2, 2, 0, 0, 2, 1, 2 };
+
+  maikel::hmm::hidden_markov_model<float> hmm(A, B, pi);
+
+  using vector_type = decltype(hmm)::vector_type;
+  std::vector<float> scaling;
+  std::vector<vector_type> alphas;
+  hmm.forward(sequence.begin(), sequence.end(), std::back_inserter(alphas), std::back_inserter(scaling));
+  float probability = std::accumulate(scaling.begin(), scaling.end(), 1.0, std::multiplies<float>());
+  probability = 1/probability;
+  EXPECT(maikel::almost_equal<float>(probability,(1.536/10000),1));
+
+  std::vector<vector_type> betas;
+  hmm.backward(sequence.rbegin(), sequence.rend(), scaling.rbegin(), std::back_inserter(betas));
+}
+
 }
 
 

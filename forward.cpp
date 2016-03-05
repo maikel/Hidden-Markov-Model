@@ -5,6 +5,7 @@
 #include <functional>
 
 #include <boost/iterator/transform_iterator.hpp>
+#include <boost/function_output_iterator.hpp>
 
 #include "hmm/hidden_markov_model.h"
 #include "hmm/iodata.h"
@@ -44,6 +45,7 @@ struct null_output_iterator :
 
     null_output_iterator & operator*() { return *this; }
 };
+
 
 int main(int argc, char *argv[])
 {
@@ -86,22 +88,24 @@ int main(int argc, char *argv[])
   std::cout << "Sequence size in memory: "
             << sequence.capacity()*sizeof(symbol_type)/1024/1024 << " mega bytes.\n";
 
-  // prepare alpha vector
-  std::vector<float> scaling;
-  scaling.reserve(sequence.size());
-  std::cout << "Reserved " << scaling.capacity()*sizeof(float)/1024/1024 << " mega bytes for scaling factors.\n";
+  // prepare scaling factor
+  float log_probability { 0 };
+  auto add_to_logprob = [&log_probability] (float scaling) { log_probability -= std::log(scaling); };
+  auto scaling_output_iterator = boost::make_function_output_iterator(add_to_logprob);
+//  std::vector<float> scaling;
+//  scaling.reserve(sequence.size());
+//  std::cout << "Reserved " << scaling.capacity()*sizeof(float)/1024/1024 << " mega bytes for scaling factors.\n";
   std::cout << "Starting forward algorithm ... " << std::flush;
   start = std::chrono::system_clock::now();
-  model.forward(sequence.begin(), sequence.end(), null_output_iterator(), std::back_inserter(scaling));
+  model.forward(sequence.begin(), sequence.end(), null_output_iterator(), scaling_output_iterator);
   end = std::chrono::system_clock::now();
   dt = end-start;
   std::cout << " time duration: " << dt.count() << "ms.\n";
 
-  auto logarithm = [](float x) { return std::log(x); };
-  float P = std::accumulate(
-      boost::make_transform_iterator(scaling.begin(), logarithm),
-      boost::make_transform_iterator(scaling.end(), logarithm), 0.0f);
-  std::cout << "log P(O|model) = " << -P << std::endl;
+//  float P = std::accumulate(
+//      boost::make_transform_iterator(scaling.begin(), logarithm),
+//      boost::make_transform_iterator(scaling.end(), logarithm), 0.0f);
+  std::cout << "log P(O|model) = " << log_probability << std::endl;
 
   return exit_success;
 }
