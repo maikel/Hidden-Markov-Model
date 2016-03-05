@@ -27,6 +27,24 @@ template <class size_type>
     return length;
   }
 
+struct null_output_iterator :
+    std::iterator< std::output_iterator_tag,
+                   null_output_iterator > {
+    /* no-op assignment */
+    template<typename T>
+    void operator=(T const&) { }
+
+    null_output_iterator & operator++() {
+        return *this;
+    }
+
+    null_output_iterator operator++(int) {
+        return *this;
+    }
+
+    null_output_iterator & operator*() { return *this; }
+};
+
 int main(int argc, char *argv[])
 {
   if (argc < 3) {
@@ -66,17 +84,15 @@ int main(int argc, char *argv[])
   dt = end-start;
   std::cout << " time duration: " << dt.count() << "ms.\n";
   std::cout << "Sequence size in memory: "
-            << sequence.capacity()*sizeof(symbol_type) << " bytes.\n";
+            << sequence.capacity()*sizeof(symbol_type)/1024/1024 << " mega bytes.\n";
 
   // prepare alpha vector
-  using alpha_type = decltype(model)::vector_type;
   std::vector<float> scaling;
   scaling.reserve(sequence.size());
-  std::vector<alpha_type> alphas;
-  alphas.reserve(sequence.size());
+  std::cout << "Reserved " << scaling.capacity()*sizeof(float)/1024/1024 << " mega bytes for scaling factors.\n";
   std::cout << "Starting forward algorithm ... " << std::flush;
   start = std::chrono::system_clock::now();
-  model.forward(sequence.begin(), sequence.end(), std::back_inserter(alphas), std::back_inserter(scaling));
+  model.forward(sequence.begin(), sequence.end(), null_output_iterator(), std::back_inserter(scaling));
   end = std::chrono::system_clock::now();
   dt = end-start;
   std::cout << " time duration: " << dt.count() << "ms.\n";
@@ -85,10 +101,7 @@ int main(int argc, char *argv[])
   float P = std::accumulate(
       boost::make_transform_iterator(scaling.begin(), logarithm),
       boost::make_transform_iterator(scaling.end(), logarithm), 0.0f);
-  std::cout << -P << std::endl;
-
-  std::cout << "alpha (last 10):\n";
-  std::copy(alphas.rbegin(), alphas.rbegin()+10, std::ostream_iterator<alpha_type>(std::cout,"\n"));
+  std::cout << "log P(O|model) = " << -P << std::endl;
 
   return exit_success;
 }

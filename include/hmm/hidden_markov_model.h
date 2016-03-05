@@ -72,7 +72,7 @@ namespace maikel { namespace hmm {
         void forward(
             ObInputIter ob_start, ObInputIter ob_end,                   // inputs
             AlphaOutputIter alphaout, ScalingOutputIter scalout)        // outputs
-        const noexcept
+        const
         {
           if (ob_start == ob_end)
             return;
@@ -108,7 +108,7 @@ namespace maikel { namespace hmm {
             ObInputIter ob_start, ObInputIter ob_end,              // inputs
             AlphaOutputIter alphaout, ScalingOutputIter scalout,   // outputs
             vector_type const& prev_alpha)                        // algorithm start data
-        const noexcept
+        const
         {
           if (ob_start == ob_end)
             return;
@@ -127,13 +127,6 @@ namespace maikel { namespace hmm {
               alpha(j) *= B(j,ob);
               scaling += alpha(j);
             }
-
-//            std::cerr << "A:\n" << A << std::endl;
-//            std::cerr << "B:\n" << B << std::endl;
-//            std::cerr << "ob: " << ob << std::endl;
-//            std::cerr << "scaling: " << scaling << std::endl;
-//            std::cerr << "prev_alpha: " << prev_alpha << std::endl;
-//            std::cerr << "alpha: " << alpha << std::endl;
 
             // scaling with assertions
             assert(scaling > 0);
