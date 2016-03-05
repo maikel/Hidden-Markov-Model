@@ -1,11 +1,11 @@
-#ifndef BUFFERED_BINARY_ITERATOR_H_
-#define BUFFERED_BINARY_ITERATOR_H_
+#ifndef OSTREAM_BINARY_ITERATOR_H_
+#define OSTREAM_BINARY_ITERATOR_H_
 
 #include <iterator>
 
 #include "gsl_assert.h"
 
-namespace mnb {
+namespace maikel {
 
   template <class _Tp>
   using alpha_type = std::pair<_Tp, std::vector<_Tp>>;
@@ -214,4 +214,4 @@ namespace mnb {
 }
 
 
-#endif /* BUFFERED_BINARY_ITERATOR_H_ */
+#endif /* OSTREAM_BINARY_ITERATOR_H_ */

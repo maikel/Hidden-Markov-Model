@@ -1,30 +1,33 @@
+/*
+ * Copyright 2016 Maikel Nadolski
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #include <fstream>
 #include <iostream>
-#include <exception>
-#include <tuple> // std::tie
 
 #include <boost/iterator/function_input_iterator.hpp>
 
-#include "hidden_markov_model.h"
+#include "hmm/hidden_markov_model.h"
+#include "hmm/sequence_generator.h"
+#include "hmm/iodata.h"
 
 enum Exit_Error_Codes {
   exit_success = 0,
   exit_not_enough_arguments = 1,
   exit_io_error = 2,
   exit_argument_error = 3
-};
-
-std::istream& getline(std::istream& in, std::istringstream& line_stream)
-{
-  std::string line;
-  std::getline(in, line);
-  line_stream.str(line);
-  line_stream.clear();
-  return in;
-}
-
-struct model_parse_error: public std::runtime_error {
-  model_parse_error(std::string arg): std::runtime_error(arg) {}
 };
 
 int main(int argc, char *argv[])
@@ -34,40 +37,12 @@ int main(int argc, char *argv[])
     return exit_not_enough_arguments;
   }
 
-  std::ifstream input;
+  std::ifstream input("model.dat");
   input.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-
-  // Model parameter which will be read in from the model data file.
-  std::size_t states;
-  std::size_t symbols;
-  mnb::hmm::vector::matrix<float> A;
-  mnb::hmm::vector::matrix<float> B;
-  std::vector<float> pi;
+  auto model = maikel::hmm::read_hidden_markov_model<float>(input);
+  input.close();
 
   // Try to read the HMM-model that will be used to generate a random sequence.
-  try {
-    std::istringstream line;
-    input.open(argv[1], std::ifstream::in);
-    getline(input, line);
-    if (!(line >> states >> symbols))
-      throw model_parse_error("Could not read number of states and symbols.");
-    A = mnb::hmm::vector::read_matrix<float>(input, states, states);
-    B = mnb::hmm::vector::read_matrix<float>(input, states, symbols);
-    pi = mnb::hmm::vector::read_array<float>(input, states);
-    input.close();
-  } catch (std::ifstream::failure& e) {
-    std::cerr << "Error while opening or reading from the model data file.\n";
-    std::cerr << "Error message is '" << e.what() << "'\n";
-    return exit_io_error;
-  } catch (model_parse_error& e) {
-    std::cerr << "Error while parsing the model data file.\n";
-    std::cerr << "Error message is '" << e.what() << "'\n";
-    return exit_io_error;
-  } catch (mnb::hmm::matrix_read_error& e) {
-    std::cerr << "Error while reading matrix or array data.\n";
-    std::cerr << "Error message is '" << e.what() << "'\n";
-    return exit_io_error;
-  }
 
   std::istringstream obslen_converter(argv[2]);
   std::size_t obslen;
@@ -76,8 +51,7 @@ int main(int argc, char *argv[])
     return exit_argument_error;
   }
 
-  mnb::hmm::vector::hidden_markov_model<float> hmm(A, B, pi);
-  std::function<std::size_t()> generator = mnb::hmm::make_generator(hmm);
+  std::function<std::size_t()> generator = maikel::hmm::make_sequence_generator(model);
   std::cout << obslen << "\n";
   std::copy(boost::make_function_input_iterator(generator, std::size_t{0}),
             boost::make_function_input_iterator(generator, obslen),
