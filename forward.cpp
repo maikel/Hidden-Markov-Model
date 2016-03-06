@@ -59,7 +59,7 @@ int main(int argc, char *argv[])
   std::chrono::duration<double, std::milli> dt;
 
   // read model
-  std::ifstream model_input("model.dat");
+  std::ifstream model_input(argv[1]);
   auto model = maikel::hmm::read_hidden_markov_model<float>(model_input);
 
   // prepare reading observation sequence
@@ -68,7 +68,7 @@ int main(int argc, char *argv[])
   std::vector<symbol_type> sequence;
 
   // read sequence size and reserve memory
-  std::ifstream sequence_input("sequence.dat");
+  std::ifstream sequence_input(argv[2]);
   size_type length = get_sequence_length<size_type>(sequence_input);
   sequence.reserve(length);
 
