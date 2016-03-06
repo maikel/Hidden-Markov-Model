@@ -20,8 +20,8 @@
 #include <Eigen/Dense>
 #include "../types.h"
 
+#include "gsl_util.h"
 #include "stochastic_properties.h"
-#include "hmm/algorithm.h"
 
 namespace maikel { namespace hmm {
 

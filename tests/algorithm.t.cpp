@@ -19,6 +19,7 @@
 #include <vector>
 #include <Eigen/Dense>
 #include "hmm/hidden_markov_model.h"
+#include "hmm/algorithm.h"
 
 namespace {
 
@@ -70,6 +71,27 @@ CASE ( "Test forward and backward algorithms for test case in Rabiners Paper" ) 
   std::vector<vector_type> betas;
   hmm.backward(sequence.rbegin(), sequence.rend(), scaling.rbegin(), std::back_inserter(betas));
 }
+
+CASE ( "baum-welch algorithm for test case in Rabiners Paper" ) {
+  Eigen::Matrix3f A;
+  A << 0.4, 0.3, 0.3,
+       0.2, 0.6, 0.2,
+       0.1, 0.1, 0.8;
+  Eigen::Matrix3f B;
+  B << 1.0, 0.0, 0.0,
+       0.0, 1.0, 0.0,
+       0.0, 0.0, 1.0;
+  Eigen::Vector3f pi;
+  pi << 0.0, 0.0, 1.0;
+  std::vector<int> sequence { 2, 2, 2, 0, 0, 2, 1, 2 };
+
+  maikel::hmm::hidden_markov_model<float> initial_hmm(A, B, pi);
+  EXPECT_NO_THROW (
+      auto new_hmm = maikel::hmm::baum_welch(initial_hmm, sequence.begin(), sequence.end());
+//      std::cerr << "A\n" << new_hmm.A << "\nB\n" << new_hmm.B << "\npi\n" << new_hmm.pi << std::endl;
+  );
+}
+
 
 }
 
