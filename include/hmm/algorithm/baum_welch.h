@@ -26,6 +26,7 @@
 #include <range/v3/all.hpp>
 #include <vector>
 #include "hmm/hidden_markov_model.h"
+#include "hmm/algorithm.h"
 
 namespace maikel { namespace hmm {
 
@@ -133,7 +134,7 @@ namespace maikel { namespace hmm {
         size_t T = sequence.size();
 
         // allocate memory
-        std::vector<float> scaling;
+        std::vector<float_type> scaling;
         std::vector<vector_type> alphas;
         std::vector<vector_type> betas;
         scaling.reserve(T);
@@ -155,7 +156,7 @@ namespace maikel { namespace hmm {
           pi(i) = alphas[0](i)*betas[T-1](i) / scaling[0];
         std::tie(A, B) = detail::baum_welch::update_matrices(sequence, alphas, betas, scaling[T-1], initial_model);
 
-        return hidden_markov_model<float>(A, B, pi);
+        return hidden_markov_model<float_type>(A, B, pi);
       }
 
   }
