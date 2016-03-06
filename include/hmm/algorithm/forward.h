@@ -19,7 +19,7 @@
 
 #include <range/v3/core.hpp>
 #include <gsl_assert.h>
-#include "types.h"
+#include "type_traits.h"
 
 namespace maikel { namespace hmm {
 

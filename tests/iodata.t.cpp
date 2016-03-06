@@ -18,7 +18,7 @@
 
 #include <fstream>
 #include <Eigen/Dense>
-#include "hmm/iodata.h"
+#include "../include/hmm/io.h"
 #include "hmm/hidden_markov_model.h"
 
 CASE ( "Can read the text file 'A.dat' and create a dynamic allocated matrix." )

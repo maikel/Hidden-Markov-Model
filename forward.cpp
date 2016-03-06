@@ -9,7 +9,9 @@
 
 #include "hmm/hidden_markov_model.h"
 #include "hmm/algorithm.h"
-#include "hmm/iodata.h"
+#include "hmm/io.h"
+
+using namespace ranges;
 
 enum Exit_Error_Codes {
   exit_success = 0,
@@ -74,15 +76,12 @@ int main(int argc, char *argv[])
   sequence.reserve(length);
 
   auto normalize = [] (symbol_type s) { return s - gsl::narrow<symbol_type>('0'); };
-  auto sequence_input_begin = boost::make_transform_iterator(
-      std::istream_iterator<symbol_type>(sequence_input), normalize);
-  auto sequence_input_end = boost::make_transform_iterator(
-      std::istream_iterator<symbol_type>(), normalize);
+  auto sequence_input_range = istream_range<symbol_type>(sequence_input);
 
   std::cout << "Read observation data ... " << std::flush;
   start = std::chrono::system_clock::now();
   // read seqeunce data from file into std::vector
-  std::copy(sequence_input_begin, sequence_input_end, std::back_inserter(sequence));
+  copy(sequence_input_range | view::transform(normalize), back_inserter(sequence));
   end = std::chrono::system_clock::now();
   dt = end-start;
   std::cout << " time duration: " << dt.count() << "ms.\n";
@@ -90,30 +89,17 @@ int main(int argc, char *argv[])
             << sequence.capacity()*sizeof(symbol_type)/1024/1024 << " mega bytes.\n";
 
   // prepare scaling factor
-
   float log_probability { 0 };
   auto add_to_logprob = [&log_probability] (float scaling) { log_probability -= std::log(scaling); };
   auto scaling_output_iterator = boost::make_function_output_iterator(add_to_logprob);
-//  std::vector<float> scaling;
-//  scaling.reserve(sequence.size());
-//  std::cout << "Reserved " << scaling.capacity()*sizeof(float)/1024/1024 << " mega bytes for scaling factors.\n";
   std::cout << "Starting forward algorithm ... " << std::flush;
   start = std::chrono::system_clock::now();
-//  maikel::hmm::forward(model, sequence, null_output_iterator(), std::back_inserter(scaling));
   maikel::hmm::forward(model, sequence, null_output_iterator(), scaling_output_iterator);
   end = std::chrono::system_clock::now();
   dt = end-start;
   std::cout << " time duration: " << dt.count() << "ms.\n";
   std::cout << "log P(O|model) = " << log_probability << std::endl;
 
-//  auto logarithm = [](float x) { return std::log(x); };
-//  std::cout << "Starting logarithm sum ... " << std::flush;
-//  float log_probability = std::accumulate(
-//      boost::make_transform_iterator(scaling.begin(), logarithm),
-//      boost::make_transform_iterator(scaling.end(), logarithm), 0.0f);
-//  end = std::chrono::system_clock::now();
-//  dt = end-start;
-//  std::cout << " total time duration: " << dt.count() << "ms.\nlog P(O|model) = " << -log_probability << std::endl;
 
   return exit_success;
 }

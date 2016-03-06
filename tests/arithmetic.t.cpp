@@ -17,7 +17,7 @@
 #include <cmath>
 #include <limits>
 
-#include "../include/types.h"
+#include "../include/type_traits.h"
 #include "hidden-markov-models.t.h"
 
 namespace {

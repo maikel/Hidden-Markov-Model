@@ -16,7 +16,7 @@
 
 #include <range/v3/core.hpp>
 #include <gsl_assert.h>
-#include "types.h"
+#include "type_traits.h"
 
 #ifndef HMM_ALGORITHM_BACKWARD_H_
 #define HMM_ALGORITHM_BACKWARD_H_

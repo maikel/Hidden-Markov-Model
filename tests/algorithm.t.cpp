@@ -80,7 +80,6 @@ CASE ( "Test forward and backward algorithms for test case in Rabiners Paper" ) 
       sequence.rbegin(), sequence.rend(),
       scaling.rbegin(), scaling.rend(),
       std::back_inserter(betas_not_ranges));
-  ranges::copy(betas_ranges, ranges::ostream_iterator<vector_type>(std::cout, "\n"));
 }
 
 CASE ( "baum-welch algorithm for test case in Rabiners Paper" ) {

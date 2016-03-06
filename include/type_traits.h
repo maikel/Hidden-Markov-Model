@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TYPES_H_
-#define TYPES_H_
+#ifndef TYPE_TRAITS_H_
+#define TYPE_TRAITS_H_
 
 #include <cmath>       // std::abs
 #include <type_traits> // std::enable_if
@@ -36,6 +36,7 @@ namespace maikel {
   template <class float_type>
     using VectorX = Eigen::Matrix<float_type, 1, Eigen::Dynamic>;
 
+
   template <class T>
       // requires FloatingPoint<T>
   inline
@@ -47,8 +48,31 @@ namespace maikel {
     return std::abs(x-y) < std::numeric_limits<T>::epsilon() * std::abs(x+y) * ulp;
   }
 
+  template <class Derived>
+    inline bool is_probability_array(const Eigen::ArrayBase<Derived>& array) noexcept
+    {
+      using float_type = typename Eigen::ArrayBase<Derived>::Scalar;
+      bool is_not_negative = (array >= 0).all();
+      bool is_normed_to_one = almost_equal<float_type>(array.sum(), 1.0, 1000);
+      return is_not_negative && is_normed_to_one;
+    }
+
+  template <class Derived>
+    bool rows_are_probability_arrays(const Eigen::DenseBase<Derived>& array)
+    {
+      using Index = typename Eigen::DenseBase<Derived>::Index;
+      using float_type = typename Eigen::DenseBase<Derived>::Scalar;
+      Index rows = array.rows();
+      for (Index i = 0; i < rows; ++i) {
+        ArrayX<float_type> row = array.row(i);
+        if (!is_probability_array(row))
+          return false;
+      }
+      return true;
+    }
+
 }
 
 
 
-#endif /* TYPES_H_ */
+#endif /* TYPE_TRAITS_H_ */

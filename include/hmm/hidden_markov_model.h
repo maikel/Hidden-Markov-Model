@@ -18,10 +18,8 @@
 #define HIDDEN_MARKOV_MODEL_H_
 
 #include <Eigen/Dense>
-#include "../types.h"
-
+#include "type_traits.h"
 #include "gsl_util.h"
-#include "stochastic_properties.h"
 
 namespace maikel { namespace hmm {
 
@@ -54,8 +52,8 @@ namespace maikel { namespace hmm {
         B = symbol_matrix;
         pi = initial_dist;
         if (!rows_are_probability_arrays(A) || !rows_are_probability_arrays(B) || !is_probability_array(pi.array()))
-          throw arguments_not_probability_arrays(
-              "Some inputs in constructor do not have the stochastical property.");
+          throw arguments_not_probability_arrays
+              { A, B, pi, "Some inputs in constructor do not have the stochastical property." };
         if (A.rows() != A.cols() || A.rows() != B.rows() || A.rows() != pi.cols())
           throw dimensions_not_consistent(
               "Dimensions of input matrices are not consistent with each other.");
@@ -73,7 +71,13 @@ namespace maikel { namespace hmm {
           hmm_errors(std::string s): std::runtime_error(s) {}
       };
       struct arguments_not_probability_arrays: public hmm_errors {
-          arguments_not_probability_arrays(const std::string& a):hmm_errors(a) {}
+          matrix_type m_A, m_B;
+          vector_type m_pi;
+          arguments_not_probability_arrays(
+              const matrix_type& A,
+              const matrix_type& B,
+              const vector_type& pi,
+              const std::string& a): hmm_errors(a), m_A(A), m_B(B), m_pi(pi) {}
       };
       struct dimensions_not_consistent: public hmm_errors {
           dimensions_not_consistent(const std::string& a): hmm_errors(a) {}

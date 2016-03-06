@@ -15,8 +15,8 @@
  */
 
 
-#ifndef HMM_IODATA_H_
-#define HMM_IODATA_H_
+#ifndef HMM_IO_H_
+#define HMM_IO_H_
 
 #include <istream>
 #include <Eigen/Dense>
@@ -98,7 +98,21 @@ namespace maikel { namespace hmm {
       return hidden_markov_model<float_type>(A, B, pi);
     }
 
+  template <class float_type>
+    typename std::enable_if<
+        std::is_floating_point<float_type>::value,
+    void>::type
+    print_model_parameters(std::ostream& out, hidden_markov_model<float_type> const& model)
+    {
+      out << "epsilon: " << std::numeric_limits<float_type>::epsilon() << "\n";
+      out << "N= " << model.states() << "\n";
+      out << "M= " << model.symbols() << "\n";
+      out << "A:\n" << model.A << "\n";
+      out << "B:\n" << model.B << "\n";
+      out << "pi:\n" << model.pi << "\n";
+      out << std::flush;
+    }
 } // namespace hmm
 } // namespace maikel
 
-#endif /* HMM_IODATA_H_ */
+#endif /* HMM_IO_H_ */

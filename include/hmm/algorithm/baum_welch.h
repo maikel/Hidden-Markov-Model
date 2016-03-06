@@ -63,7 +63,7 @@ namespace maikel { namespace hmm {
         forward(initial_model, sequence_range, std::back_inserter(alphas), std::back_inserter(scaling));
         backward(initial_model,
             sequence_range | ranges::view::reverse,
-                   scaling | ranges::view::reverse, std::back_inserter(betas));
+                   scaling | ranges::view::reverse, ranges::back_inserter(betas));
 
         // calculate matrix updates
         matrix_type A = matrix_type::Zero(initial_model.states(), initial_model.states());
