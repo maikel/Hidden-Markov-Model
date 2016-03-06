@@ -77,7 +77,7 @@ namespace maikel { namespace hmm {
             for (Index j = 0; j < states; ++j) {
               float xi_t = alpha(i)*model.A(i,j)*model.B(j,ob_next)*beta(j);
               xi(i,j)  += xi_t;
-              gamma(j) += xi_t;
+              gamma(i) += xi_t;
             }
           for (Index j = 0; j < states; ++j) {
             B(j,ob) += gamma(j);
@@ -133,12 +133,15 @@ namespace maikel { namespace hmm {
         size_t T = sequence.size();
 
         // allocate memory
-        std::vector<float> scaling(T);
-        std::vector<vector_type> alphas(T);
-        std::vector<vector_type> betas(T);
+        std::vector<float> scaling;
+        std::vector<vector_type> alphas;
+        std::vector<vector_type> betas;
+        scaling.reserve(T);
+        alphas.reserve(T);
+        betas.reserve(T);
 
         // calculate forward and backward coefficients
-        forward(initial_model, sequence, std::back_inserter(alphas), std::back_inserter(scaling));
+        forward(initial_model, sequence, ranges::back_inserter(alphas), ranges::back_inserter(scaling));
         backward(initial_model,
                   sequence | ranges::view::reverse,
                    scaling | ranges::view::reverse, ranges::back_inserter(betas));
