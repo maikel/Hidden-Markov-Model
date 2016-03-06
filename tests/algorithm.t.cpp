@@ -39,11 +39,13 @@ CASE ( "Test forward algorithm for test case in Rabiners Paper" ) {
   std::vector<float> scaling;
   std::vector<Eigen::VectorXf> alphas;
   maikel::hmm::hidden_markov_model<float> hmm(A, B, pi);
-  hmm.forward(sequence.begin(), sequence.end(), std::back_inserter(alphas), std::back_inserter(scaling));
+  forward(hmm, sequence, std::back_inserter(alphas), std::back_inserter(scaling));
   float probability = std::accumulate(scaling.begin(), scaling.end(), 1.0, std::multiplies<float>());
   probability = 1/probability;
   EXPECT(maikel::almost_equal<float>(probability,(1.536/10000),1));
 }
+
+
 
 CASE ( "Test forward and backward algorithms for test case in Rabiners Paper" ) {
   Eigen::Matrix3f A;
@@ -63,13 +65,21 @@ CASE ( "Test forward and backward algorithms for test case in Rabiners Paper" ) 
   using vector_type = decltype(hmm)::vector_type;
   std::vector<float> scaling;
   std::vector<vector_type> alphas;
-  hmm.forward(sequence.begin(), sequence.end(), std::back_inserter(alphas), std::back_inserter(scaling));
+  maikel::hmm::forward(hmm, sequence.begin(), sequence.end(), std::back_inserter(alphas), std::back_inserter(scaling));
   float probability = std::accumulate(scaling.begin(), scaling.end(), 1.0, std::multiplies<float>());
   probability = 1/probability;
   EXPECT(maikel::almost_equal<float>(probability,(1.536/10000),1));
 
-  std::vector<vector_type> betas;
-  hmm.backward(sequence.rbegin(), sequence.rend(), scaling.rbegin(), std::back_inserter(betas));
+  std::vector<vector_type> betas_ranges;
+  maikel::hmm::backward(hmm,
+      sequence | ranges::view::reverse,
+       scaling | ranges::view::reverse,
+      std::back_inserter(betas_ranges));
+  std::vector<vector_type> betas_not_ranges;
+  maikel::hmm::backward(hmm,
+      sequence.rbegin(), sequence.rend(),
+      scaling.rbegin(), scaling.rend(),
+      std::back_inserter(betas_not_ranges));
 }
 
 CASE ( "baum-welch algorithm for test case in Rabiners Paper" ) {
@@ -87,7 +97,7 @@ CASE ( "baum-welch algorithm for test case in Rabiners Paper" ) {
 
   maikel::hmm::hidden_markov_model<float> initial_hmm(A, B, pi);
   EXPECT_NO_THROW (
-      auto new_hmm = maikel::hmm::baum_welch(initial_hmm, sequence.begin(), sequence.end());
+      auto new_hmm = maikel::hmm::naive::baum_welch(initial_hmm, sequence.begin(), sequence.end());
 //      std::cerr << "A\n" << new_hmm.A << "\nB\n" << new_hmm.B << "\npi\n" << new_hmm.pi << std::endl;
   );
 }

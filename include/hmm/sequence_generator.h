@@ -57,38 +57,40 @@ namespace maikel { namespace hmm {
           }
 
         private:
-            index_type
-            find_by_distribution(const VectorX<float_type>& dist, float_type X) noexcept
-            {
-              float_type P_fn = 0;
-              index_type state = 0;
-              index_type max = dist.size();
-              while (state < max) {
-                P_fn += dist(state);
-                if (P_fn < X)
-                  ++state;
-                else
-                  break;
-              }
-              return state;
+          index_type
+          find_by_distribution(const VectorX<float_type>& dist, float_type X)
+          noexcept
+          {
+            float_type P_fn = 0;
+            index_type state = 0;
+            index_type max = dist.size();
+            while (state < max) {
+              P_fn += dist(state);
+              if (P_fn < X)
+                ++state;
+              else
+                break;
             }
+            return state;
+          }
 
-            index_type
-            find_by_distribution(const MatrixX<float_type>& dist, index_type row, float_type X) noexcept
-            {
-              Expects(row < dist.rows());
-              float_type P_fn = 0;
-              index_type state = 0;
-              index_type cols = dist.cols();
-              while (state < cols) {
-                P_fn += dist(row, state);
-                if (P_fn < X)
-                  ++state;
-                else
-                  break;
-              }
-              return state;
+          index_type
+          find_by_distribution(const MatrixX<float_type>& dist, index_type row, float_type X)
+          noexcept
+          {
+            Expects(row < dist.rows());
+            float_type P_fn = 0;
+            index_type state = 0;
+            index_type cols = dist.cols();
+            while (state < cols) {
+              P_fn += dist(row, state);
+              if (P_fn < X)
+                ++state;
+              else
+                break;
             }
+            return state;
+          }
       };
   } // namespace detail
 
