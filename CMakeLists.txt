@@ -1,7 +1,7 @@
 project(Hidden-Markov-Models)
 cmake_minimum_required(VERSION 3.0)
 
-SET(CMAKE_BUILD_TYPE Debug)
+SET(CMAKE_BUILD_TYPE Release)
 
 include_directories("${PROJECT_SOURCE_DIR}/third_party/eigen"
                     "${PROJECT_SOURCE_DIR}/third_party/GSL/include"

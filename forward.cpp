@@ -56,10 +56,6 @@ int main(int argc, char *argv[])
     std::cerr << "Usage: " << argv[0] << " <model.dat> <sequence.dat>\n";
     return exit_not_enough_arguments;
   }
-  // prepare some timer
-  std::chrono::system_clock::time_point start;
-  std::chrono::system_clock::time_point end;
-  std::chrono::duration<double, std::milli> dt;
 
   // read model
   std::ifstream model_input(argv[1]);
@@ -74,32 +70,16 @@ int main(int argc, char *argv[])
   std::ifstream sequence_input(argv[2]);
   size_type length = get_sequence_length<size_type>(sequence_input);
   sequence.reserve(length);
-
   auto normalize = [] (symbol_type s) { return s - gsl::narrow<symbol_type>('0'); };
   auto sequence_input_range = istream_range<symbol_type>(sequence_input);
-
-  std::cout << "Read observation data ... " << std::flush;
-  start = std::chrono::system_clock::now();
-  // read seqeunce data from file into std::vector
   copy(sequence_input_range | view::transform(normalize), back_inserter(sequence));
-  end = std::chrono::system_clock::now();
-  dt = end-start;
-  std::cout << " time duration: " << dt.count() << "ms.\n";
-  std::cout << "Sequence size in memory: "
-            << sequence.capacity()*sizeof(symbol_type)/1024/1024 << " mega bytes.\n";
 
-  // prepare scaling factor
+  // calculate logarithm probability
   float log_probability { 0 };
   auto add_to_logprob = [&log_probability] (float scaling) { log_probability -= std::log(scaling); };
   auto scaling_output_iterator = boost::make_function_output_iterator(add_to_logprob);
-  std::cout << "Starting forward algorithm ... " << std::flush;
-  start = std::chrono::system_clock::now();
   maikel::hmm::forward(model, sequence, null_output_iterator(), scaling_output_iterator);
-  end = std::chrono::system_clock::now();
-  dt = end-start;
-  std::cout << " time duration: " << dt.count() << "ms.\n";
   std::cout << "log P(O|model) = " << log_probability << std::endl;
-
 
   return exit_success;
 }

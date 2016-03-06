@@ -97,7 +97,7 @@ CASE ( "baum-welch algorithm for test case in Rabiners Paper" ) {
 
   maikel::hmm::hidden_markov_model<float> initial_hmm(A, B, pi);
   EXPECT_NO_THROW (
-      auto new_hmm = maikel::hmm::naive::baum_welch(initial_hmm, sequence.begin(), sequence.end());
+      auto new_hmm = maikel::hmm::naive::baum_welch(initial_hmm, sequence);
 //      std::cerr << "A\n" << new_hmm.A << "\nB\n" << new_hmm.B << "\npi\n" << new_hmm.pi << std::endl;
   );
 }

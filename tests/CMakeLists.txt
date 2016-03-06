@@ -11,7 +11,7 @@ include_directories  ( "${PROJECT_SOURCE_DIR}/../third_party/eigen"
 set( SOURCES hidden-markov-models.t.cpp arrays.t.cpp arithmetic.t.cpp iodata.t.cpp algorithm.t.cpp )
 
 add_compile_options( -Wall -Wno-missing-braces -std=c++11 )
-add_compile_options( -DGSL_THROW_ON_CONTRACT_VIOLATION )
+add_compile_options( -O3 -g -DGSL_THROW_ON_CONTRACT_VIOLATION )
 add_executable ( hidden-markov-models.t ${SOURCES} )
 
 enable_testing()

@@ -16,7 +16,7 @@
 
 #include "hidden-markov-models.t.h"
 
-#include "stochastic_properties.h"
+#include "type_traits.h"
 
 #include <fstream>
 #include <Eigen/Dense>
@@ -42,7 +42,7 @@ CASE( "is stochastic or not" )
 {
   Eigen::ArrayXf array(3);
   array << 0.5, 0.2, 0.3;
-  EXPECT(maikel::hmm::is_probability_array(array));
+  EXPECT(maikel::is_probability_array(array));
 }
 
 CASE( "is stochastic matrix ")
@@ -50,7 +50,7 @@ CASE( "is stochastic matrix ")
   Eigen::MatrixXf matrix(2,2);
   matrix << 0.3, 0.7,
             0.5, 0.5;
-  EXPECT(maikel::hmm::rows_are_probability_arrays(matrix));
+  EXPECT(maikel::rows_are_probability_arrays(matrix));
 }
 
 }
