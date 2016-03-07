@@ -37,14 +37,12 @@ namespace maikel { namespace hmm {
                class Float = typename HiddenMarkovModel::float_type>
       std::pair<Matrix, Matrix>
       update_matrices(
-          SeqRng&   sequence,
-          AlphaRng& alphas,
-          BetaRng&  betas,
+          SeqRng&&   sequence,
+          AlphaRng&& alphas,
+          BetaRng&&  betas,
           Float scaling,
           HiddenMarkovModel const& model)
       {
-        using alpha_t = typename AlphaRng::value_type;
-        using beta_t  = typename BetaRng::value_type;
         using Index   = typename HiddenMarkovModel::index_type;
         using Vector  = typename HiddenMarkovModel::vector_type;
         using namespace ranges;
@@ -70,8 +68,8 @@ namespace maikel { namespace hmm {
           Expects(0 <= ob_next && ob_next < symbols);
 
           gamma.setZero();
-          alpha_t alpha = *alpha_iterator++;
-          beta_t beta   = *((beta_iterator++)+1);
+          Vector alpha = *alpha_iterator++;
+          Vector beta   = *((beta_iterator++)+1);
           Expects(alpha.size() == states);
           Expects(beta.size()  == states);
           for (Index i = 0; i < states; ++i)
@@ -94,8 +92,8 @@ namespace maikel { namespace hmm {
         Expects(alpha_iterator != end(alphas));
         Expects(beta_iterator  != end(betas));
         Index ob = narrow<Index>(*seq_iterator++);
-        alpha_t alpha = *alpha_iterator++;
-        beta_t  beta  = *beta_iterator++;
+        Vector alpha = *alpha_iterator++;
+        Vector beta  = *beta_iterator++;
         for (Index i = 0; i < states; ++i) {
           float entry = alpha(i)*beta(i) / scaling;
           B(i,ob) += entry;
@@ -154,7 +152,8 @@ namespace maikel { namespace hmm {
 
         for (index_type i = 0; i < initial_model.states(); ++i)
           pi(i) = alphas[0](i)*betas[T-1](i) / scaling[0];
-        std::tie(A, B) = detail::baum_welch::update_matrices(sequence, alphas, betas, scaling[T-1], initial_model);
+        std::tie(A, B) = detail::baum_welch::update_matrices(sequence, alphas,
+            betas | ranges::view::reverse, scaling[T-1], initial_model);
 
         return hidden_markov_model<float_type>(A, B, pi);
       }

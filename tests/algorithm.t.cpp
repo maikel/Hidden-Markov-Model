@@ -16,12 +16,39 @@
 
 #include "hidden-markov-models.t.h"
 
+#include <tuple>
 #include <vector>
 #include <Eigen/Dense>
 #include "hmm/hidden_markov_model.h"
 #include "hmm/algorithm.h"
 
 namespace {
+
+CASE ( "Do we see if a bijective map is bijective onto values?" ) {
+  using Index = uint8_t;
+  std::map<int, Index> bijective_map_int { {0,0}, {1,1} };
+  std::map<std::string, Index> bijective_map_string { {"foo",1}, {"bar",0} };
+  std::map<int, Index> not_bijective_map_int1 { {0,1}, {1,2} };
+  std::map<int, Index> not_bijective_map_int2 { {0,1}, {2,1} };
+
+  EXPECT(maikel::is_bijective_index_map(bijective_map_int));
+  EXPECT(maikel::is_bijective_index_map(bijective_map_string));
+  EXPECT_NOT(maikel::is_bijective_index_map(not_bijective_map_int1));
+  EXPECT_NOT(maikel::is_bijective_index_map(not_bijective_map_int2));
+}
+
+CASE ("convert symbols to indicies") {
+  using Index = int;
+  std::vector<std::string> symbols { "foo", "bar" };
+  auto symbols_to_index = maikel::map_from_symbols<Index>(ranges::view::all(symbols));
+  EXPECT(symbols_to_index["foo"] == 0);
+  EXPECT(symbols_to_index["bar"] == 1);
+
+  std::vector<int> symbols_2 { 1, 2 };
+  auto sti = maikel::map_from_symbols<Index>(symbols_2);
+  EXPECT(sti[1] == 0);
+  EXPECT(sti[2] == 1);
+}
 
 CASE ( "Test forward algorithm for test case in Rabiners Paper" ) {
   Eigen::Matrix3f A;

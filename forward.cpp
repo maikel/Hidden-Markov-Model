@@ -1,4 +1,5 @@
 #include <iostream>
+#include <array>
 #include <chrono>
 #include <vector>
 #include <fstream>
@@ -19,17 +20,6 @@ enum Exit_Error_Codes {
   exit_io_error = 2,
   exit_argument_error = 3
 };
-
-template <class size_type>
-  size_type get_sequence_length(std::istream& in)
-  {
-    std::string line;
-    std::getline(in, line);
-    std::istringstream linestream(line);
-    size_type length;
-    linestream >> length;
-    return length;
-  }
 
 struct null_output_iterator :
     std::iterator< std::output_iterator_tag,
@@ -62,17 +52,11 @@ int main(int argc, char *argv[])
   auto model = maikel::hmm::read_hidden_markov_model<float>(model_input);
 
   // prepare reading observation sequence
-  using symbol_type = uint8_t;
-  using size_type   = std::vector<symbol_type>::size_type;
-  std::vector<symbol_type> sequence;
-
-  // read sequence size and reserve memory
+  using index_type = uint8_t;
+  auto symbols = ranges::view::ints | ranges::view::take(model.symbols());
+  std::map<int,index_type> symbol_to_index = maikel::map_from_symbols<index_type>(symbols);
   std::ifstream sequence_input(argv[2]);
-  size_type length = get_sequence_length<size_type>(sequence_input);
-  sequence.reserve(length);
-  auto normalize = [] (symbol_type s) { return s - gsl::narrow<symbol_type>('0'); };
-  auto sequence_input_range = istream_range<symbol_type>(sequence_input);
-  copy(sequence_input_range | view::transform(normalize), back_inserter(sequence));
+  std::vector<index_type> sequence = maikel::hmm::read_sequence(sequence_input, symbol_to_index);
 
   // calculate logarithm probability
   float log_probability { 0 };

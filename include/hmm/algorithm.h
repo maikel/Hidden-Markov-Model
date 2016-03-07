@@ -17,9 +17,43 @@
 #ifndef HMM_ALGORITHM_H_
 #define HMM_ALGORITHM_H_
 
+#include <map>
+#include <range/v3/core.hpp>
+
 #include "hmm/algorithm/forward.h"
 #include "hmm/algorithm/backward.h"
 #include "hmm/algorithm/baum_welch.h"
 
+namespace maikel {
+
+  template <class SymbolType, class IndexType>
+    // requires UnsignedIntegral<I>
+    bool is_bijective_index_map(std::map<SymbolType,IndexType> const& map)
+    {
+      IndexType max_index = ranges::max( map | ranges::view::values );
+      std::vector<std::size_t> histogram(max_index+1);
+      for (IndexType index : map|ranges::view::values)
+        ++gsl::at(histogram,index);
+      return ranges::all_of(histogram, [](std::size_t count){ return count == 1; });
+    }
+
+  template <class T>
+  using ValueType = typename std::remove_reference<T>::type::value_type;
+
+  template <class Index, class Range, class T = ranges::range_value_t<Range>>
+      // requires UnsignedIntegral<IndexType> && InputRange<SymbolRange>
+    std::map<T,Index>
+    map_from_symbols(Range&& range)
+    {
+      std::map<T,Index> symbols_to_index;
+      Index index { 0 };
+      ranges::for_each(range | ranges::view::unique, [&symbols_to_index,&index](T const& s){
+          symbols_to_index[s] = index++;
+      });
+      Ensures(is_bijective_index_map(symbols_to_index));
+      return symbols_to_index;
+    }
+
+}
 
 #endif /* HMM_ALGORITHM_H_ */

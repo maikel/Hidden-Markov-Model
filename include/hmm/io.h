@@ -18,9 +18,11 @@
 #ifndef HMM_IO_H_
 #define HMM_IO_H_
 
+#include <map>
 #include <istream>
 #include <Eigen/Dense>
 #include <gsl_assert.h>
+#include <range/v3/all.hpp>
 
 #include "hidden_markov_model.h"
 
@@ -32,6 +34,10 @@ namespace maikel { namespace hmm {
 
   struct read_ascii_matrix_error: public std::runtime_error {
       read_ascii_matrix_error(std::string s): std::runtime_error(s) {}
+  };
+
+  struct read_sequence_error: public std::runtime_error {
+      read_sequence_error(std::string s): std::runtime_error(s) {}
   };
 
   inline std::istream& getline(std::istream& in, std::istringstream& linestream)
@@ -111,6 +117,34 @@ namespace maikel { namespace hmm {
       out << "B:\n" << model.B << "\n";
       out << "pi:\n" << model.pi << "\n";
       out << std::flush;
+    }
+
+  template <class size_type>
+    size_type read_sequence_length(std::istream& in)
+    {
+      std::string line;
+      std::getline(in, line);
+      std::istringstream linestream(line);
+      size_type length;
+      linestream >> length;
+      return length;
+    }
+
+  template <class Integral, class Symbol>
+    std::vector<Integral>
+    read_sequence(std::istream& in, std::map<Symbol,Integral>& symbol_to_index)
+    {
+      std::vector<Integral> sequence;
+      sequence.reserve(read_sequence_length<std::size_t>(in));
+      auto symbol_map = [&symbol_to_index] (Symbol const& s) {
+          auto found = symbol_to_index.find(s);
+          if (found == symbol_to_index.end())
+            throw read_sequence_error("Unkown Symbols in Input.");
+          return found->second;
+      };
+      auto sequence_input = ranges::istream_range<Symbol>(in);
+      ranges::copy(sequence_input | ranges::view::transform(symbol_map), ranges::back_inserter(sequence));
+      return sequence;
     }
 } // namespace hmm
 } // namespace maikel
