@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
+#include <time.h>
 #include "nrutil.h"
 #include "hmm.h"
 static char rcsid[] = "$Id: testvit.c,v 1.3 1998/02/23 07:39:07 kanungo Exp kanungo $";
@@ -52,16 +53,18 @@ int main (int argc, char **argv)
 	alpha = dmatrix(1, T, 1, hmm.N);
 	scale = dvector(1, T);
 
-	printf("------------------------------------\n");
-	printf("Forward without scaling \n");
-	Forward(&hmm, T, O, alpha, &proba); 
-	fprintf(stdout, "log prob(O| model) = %E\n", log(proba));
+//	printf("------------------------------------\n");
+//	printf("Forward without scaling \n");
+//	Forward(&hmm, T, O, alpha, &proba);
+//	fprintf(stdout, "log prob(O| model) = %E\n", log(proba));
 
 	printf("------------------------------------\n");
 	printf("Forward with scaling \n");
-
+	clock_t start = clock(), diff;
 	ForwardWithScale(&hmm, T, O, alpha, scale, &logproba); 
-
+	diff = clock() - start;
+	int msec = diff * 1000 / CLOCKS_PER_SEC;
+	printf("Time taken %d milliseconds\n", msec);
 	fprintf(stdout, "log prob(O| model) = %E\n", logproba);
 	printf("------------------------------------\n");
 	printf("The two log probabilites should identical \n");

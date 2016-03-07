@@ -20,6 +20,7 @@
 #include <range/v3/core.hpp>
 #include <gsl_assert.h>
 #include "type_traits.h"
+#include "function_profiler.h"
 
 namespace maikel { namespace hmm {
 
@@ -40,6 +41,7 @@ namespace maikel { namespace hmm {
       initial_alpha(Symbol s, const MatrixX<Float>& B, const VectorX<Float>& pi)
       noexcept
       {
+        MAIKEL_PROFILER;
         // check pre conditions
         using Index = typename MatrixX<Float>::Index;
         Expects(B.rows() == pi.size());
@@ -111,6 +113,7 @@ namespace maikel { namespace hmm {
       SeqI seq_iterator, SeqS seq_sentinel,
       AlphasOut alphas_out, ScalingOut scaling_out)
     {
+      MAIKEL_PROFILER;
       if (seq_iterator == seq_sentinel)
         return;
       using float_type = typename HiddenMarkovModel::float_type;
@@ -140,6 +143,7 @@ namespace maikel { namespace hmm {
         AlphasOut alphas_out, ScalingOut scaling_out,
         VectorX<Float> prev_alpha)
     {
+      MAIKEL_PROFILER;
       if (seq_iterator == seq_sentinel)
         return;
       using float_type = typename HiddenMarkovModel::float_type;
