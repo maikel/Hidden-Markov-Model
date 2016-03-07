@@ -60,7 +60,9 @@ int main(int argc, char *argv[])
 
   // calculate logarithm probability
   float log_probability { 0 };
-  auto add_to_logprob = [&log_probability] (float scaling) { log_probability -= std::log(scaling); };
+  auto add_to_logprob = [&log_probability] (float scaling) {
+    log_probability -= std::log(scaling);
+  };
   auto scaling_output_iterator = boost::make_function_output_iterator(add_to_logprob);
   maikel::hmm::forward(model, sequence, null_output_iterator(), scaling_output_iterator);
   std::cout << "log P(O|model) = " << log_probability << std::endl;
