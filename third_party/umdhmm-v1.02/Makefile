@@ -30,6 +30,6 @@ esthmm: esthmm.o baum.o nrutil.o hmmutils.o sequence.o \
 	 $(CC) -o esthmm esthmm.o baum.o nrutil.o sequence.o hmmutils.o \
 		forward.o backward.o hmmrand.o -lm
 clean:
-	rm *.o a.out 
+	rm -f *.o testvit testfor esthmm genseq
 # DO NOT DELETE THIS LINE -- make depend depends on it.
 
