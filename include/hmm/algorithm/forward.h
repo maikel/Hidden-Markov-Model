@@ -41,7 +41,6 @@ namespace maikel { namespace hmm {
       initial_alpha(Symbol s, const MatrixX<Float>& B, const VectorX<Float>& pi)
       noexcept
       {
-        MAIKEL_PROFILER;
         // check pre conditions
         using Index = typename MatrixX<Float>::Index;
         Expects(B.rows() == pi.size());
@@ -143,7 +142,6 @@ namespace maikel { namespace hmm {
         AlphasOut alphas_out, ScalingOut scaling_out,
         VectorX<Float> prev_alpha)
     {
-      MAIKEL_PROFILER;
       if (seq_iterator == seq_sentinel)
         return;
       using float_type = typename HiddenMarkovModel::float_type;

@@ -72,10 +72,19 @@ namespace maikel {
       std::tie(time, name) = function_info;
       out << std::setw(10) << time.count()*100/total_duration.count() << "% ";
       out << std::setw(10);
-      auto milliseconds = std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(time);
-      out << milliseconds.count() << "ms ";
+      auto time_ms = std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(time);
+      out << time_ms.count() << "ms ";
       out << std::setw(max_name_length + 2) << name << "\n";
     }
+  }
+
+  void function_profiler::reset()
+  {
+    if (is_active)
+      throw timer_is_currently_active();
+
+    time_table.clear();
+    total_duration = clock::duration::zero();
   }
 
 } // namespace maikel

@@ -23,23 +23,30 @@
 
 #ifndef MAIKEL_PROFILE_FUNCTIONS
 #define MAIKEL_PROFILER
+#define MAIKEL_NAMED_PROFILER
 #else
-#define MAIKEL_PROFILER ::maikel::function_profiler __maikel_profiler(__func__, __FILE__)
+#define MAIKEL_PROFILER ::maikel::function_profiler __maikel_function_profiler(__func__, __FILE__)
+#define MAIKEL_NAMED_PROFILER(x) ::maikel::function_profiler __maikel_function_profiler(x, __FILE__)
 #endif
 
 
 
 namespace maikel {
 
+  struct timer_is_currently_active: public std::runtime_error {
+      timer_is_currently_active(): std::runtime_error(
+          "Can not reset time table because there is currently a running profiler.") {}
+  };
+
   /**
-   * Tag functions and sum each execution time. Im using this to make a fast
+   * Tag functions and sum times for each execution. Im using this to make a fast
    * and dirty profile of my functions.
    *
    * Example:
    *
    *     void foo_function()
    *     {
-   *        function_profiler("foo_function")
+   *        maikel::function_profiler profiler("name","group");
    *
    *        // heavy code blah blah ...
    *     }
@@ -47,7 +54,7 @@ namespace maikel {
    *     int main()
    *     {
    *         foo_function();
-   *         function_profiler::print_statistics(std::cout);
+   *         maikel::function_profiler::print_statistics(std::cout);
    *     }
    */
   class function_profiler {
@@ -67,6 +74,7 @@ namespace maikel {
       function_profiler(std::string function_name, std::string file_name) noexcept;
       ~function_profiler() noexcept;
       static void print_statistics(std::ostream& out);
+      static void reset();
   };
 
 
