@@ -135,6 +135,7 @@ namespace maikel { namespace hmm {
     std::vector<Integral>
     read_sequence(std::istream& in, std::map<Symbol,Integral>& symbol_to_index)
     {
+      MAIKEL_PROFILER;
       std::vector<Integral> sequence;
       sequence.reserve(read_sequence_length<std::size_t>(in));
       auto symbol_map = [&symbol_to_index] (Symbol const& s) {

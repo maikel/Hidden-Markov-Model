@@ -45,6 +45,60 @@ struct null_output_iterator :
 
 inline double my_log(double x) noexcept { return std::log(x); }
 
+template <class float_type, class index_type>
+  void accumulate_and_view_transform(
+      std::vector<index_type> const& sequence,
+      maikel::hmm::hidden_markov_model<float_type> const& model)
+  {
+    BOOST_LOG_TRIVIAL(info) << "Starting forward algorithm with storing scaling factors into std::vector.";
+    BOOST_LOG_TRIVIAL(info) << "Use accumulate on a view::transformed scaling list.";
+    MAIKEL_PROFILER;
+    std::vector<float_type> scaling;
+    scaling.reserve(sequence.size());
+
+    maikel::hmm::forward(model, sequence, null_output_iterator(), ranges::back_inserter(scaling));
+    { MAIKEL_NAMED_PROFILER("logarithm_by_view");
+        float_type log_probability = ranges::accumulate(scaling | ranges::view::transform(my_log), 0.0);
+        BOOST_LOG_TRIVIAL(info) << "log P(O|model) = " << -log_probability;
+    } // MAIKEL_NAMED_PROFILER
+  }
+
+template <class float_type, class index_type>
+  void transform_first_then_accumulate(
+      std::vector<index_type> const& sequence,
+      maikel::hmm::hidden_markov_model<float_type> const& model)
+  {
+    BOOST_LOG_TRIVIAL(info) << "Starting forward algorithm with storing scaling factors into std::vector.";
+    BOOST_LOG_TRIVIAL(info) << "Transform scaling factors first and then accumulate.";
+    MAIKEL_PROFILER;
+    std::vector<float_type> scaling;
+    scaling.reserve(sequence.size());
+
+    maikel::hmm::forward(model, sequence, null_output_iterator(), ranges::back_inserter(scaling));
+    { MAIKEL_NAMED_PROFILER("logarithm_by_action");
+      ranges::action::transform(scaling, my_log);
+      float_type log_probability = ranges::accumulate(scaling, 0.0);
+      BOOST_LOG_TRIVIAL(info) << "log P(O|model) = " << -log_probability;
+    } // MAIKEL_NAMED_PROFILER
+  }
+
+template <class float_type, class index_type>
+  void sum_scaling_factors_by_output_iterator(
+      std::vector<index_type> const& sequence,
+      maikel::hmm::hidden_markov_model<float_type> const& model)
+  {
+    BOOST_LOG_TRIVIAL(info) << "Starting forward algorithm with summing scaling factors with an function output iterator.";
+    MAIKEL_PROFILER;
+    // calculate logarithm probability
+    float_type log_probability = 0.0;
+    auto add_to_logprob = [&log_probability] (float_type scaling) {
+       log_probability += my_log(scaling);
+    };
+    auto scaling_output_iterator = boost::make_function_output_iterator(add_to_logprob);
+    maikel::hmm::forward(model, sequence, null_output_iterator(), scaling_output_iterator);
+    BOOST_LOG_TRIVIAL(info) << "log P(O|model) = " << -log_probability;
+  }
+
 int main(int argc, char *argv[])
 {
 
@@ -61,60 +115,25 @@ int main(int argc, char *argv[])
   // prepare reading observation sequence
   using index_type = uint8_t;
 //  auto symbols = ranges::view::ints | ranges::view::take(model.symbols());
-  std::vector<int> symbols { 0, 1 };
+  std::vector<int> symbols { 1, 2 };
   std::map<int,index_type> symbol_to_index = maikel::map_from_symbols<index_type>(symbols);
   std::ifstream sequence_input(argv[2]);
   BOOST_LOG_TRIVIAL(info) << "Reading sequence ...";
   std::vector<index_type> sequence = maikel::hmm::read_sequence(sequence_input, symbol_to_index);
-  BOOST_LOG_TRIVIAL(info) << "Done. Sequence has " << sequence.size() << " symbols.";
-//  BOOST_LOG_TRIVIAL(info) << "Starting forward algorithm with storing scaling factors into std::vector.";
-//  BOOST_LOG_TRIVIAL(info) << "Transform scaling factors first and then accumulate.";
-//  { MAIKEL_PROFILER;
-//    std::vector<float_type> scaling;
-//    scaling.reserve(sequence.size());
-//
-//    maikel::hmm::forward(model, sequence, null_output_iterator(), ranges::back_inserter(scaling));
-//    { MAIKEL_NAMED_PROFILER("main::transform_first_then_accumulate");
-//      ranges::action::transform(scaling, my_log);
-//      float_type log_probability = ranges::accumulate(scaling, 0.0);
-//      std::cout << "log P(O|model) = " << -log_probability << std::endl;
-//    } // MAIKEL_NAMED_PROFILER
-//
-//  } // MAIKEL_PROFILER
-//
-//  maikel::function_profiler::print_statistics(std::cerr);
-//  maikel::function_profiler::reset();
-//
-//  BOOST_LOG_TRIVIAL(info) << "Starting forward algorithm with storing scaling factors into std::vector.";
-//  BOOST_LOG_TRIVIAL(info) << "Use accumulate on a view::transformed scalingl list.";
-//  { MAIKEL_PROFILER;
-//    std::vector<float_type> scaling;
-//    scaling.reserve(sequence.size());
-//
-//    maikel::hmm::forward(model, sequence, null_output_iterator(), ranges::back_inserter(scaling));
-//    { MAIKEL_NAMED_PROFILER("main::accumulate_viewed_transform");
-//        float_type log_probability = ranges::accumulate(scaling | ranges::view::transform(my_log), 0.0);
-//        std::cout << "log P(O|model) = " << -log_probability << std::endl;
-//      } // MAIKEL_NAMED_PROFILER
-//
-//    } // MAIKEL_PROFILER
-//
-//    maikel::function_profiler::print_statistics(std::cerr);
-//    maikel::function_profiler::reset();
+  BOOST_LOG_TRIVIAL(info) << "Done. Sequence length is " << sequence.size() << " ("
+      << sequence.size() / sizeof(index_type) / 1024 / 1024 << " mega bytes)";
+  maikel::function_profiler::print_statistics(std::cerr);
 
+  maikel::function_profiler::reset();
+  accumulate_and_view_transform(sequence, model);
+  maikel::function_profiler::print_statistics(std::cerr);
 
-  BOOST_LOG_TRIVIAL(info) << "Starting forward algorithm with summing scaling factors with an function output iterator.";
-  { MAIKEL_PROFILER;
-     // calculate logarithm probability
-     float_type log_probability = 0.0;
-     auto add_to_logprob = [&log_probability] (float_type scaling) {
-         log_probability += my_log(scaling);
-     };
-     auto scaling_output_iterator = boost::make_function_output_iterator(add_to_logprob);
-     maikel::hmm::forward(model, sequence, null_output_iterator(), scaling_output_iterator);
-     std::cout << "log P(O|model) = " << -log_probability << std::endl;
-  }
+  maikel::function_profiler::reset();
+  transform_first_then_accumulate(sequence, model);
+  maikel::function_profiler::print_statistics(std::cerr);
 
+  maikel::function_profiler::reset();
+  sum_scaling_factors_by_output_iterator(sequence, model);
   maikel::function_profiler::print_statistics(std::cerr);
 
   return exit_success;
