@@ -16,6 +16,8 @@
 
 #include <random>
 
+#include "hmm/hidden_markov_model.h"
+
 #ifndef HMM_SEQUENCE_GENERATOR_H_
 #define HMM_SEQUENCE_GENERATOR_H_
 
@@ -25,40 +27,44 @@ namespace maikel { namespace hmm {
     template <class float_type>
       class sequence_generator {
         public:
-          using index_type  = typename hidden_markov_model<float_type>::index_type;
+          using hmm         = typename ::maikel::hmm::hidden_markov_model<float_type>;
+          using index_type  = typename hmm::size_type;
           using state_type  = index_type;
           using symbol_type = index_type;
-          using matrix_type = typename hidden_markov_model<float_type>::matrix_type;
+          using matrix      = typename hmm::matrix;
+          using row_vector  = typename hmm::row_vector;
 
         private:
           // random device stuff
           std::default_random_engine m_engine;
           std::uniform_real_distribution<float_type> m_uniform {0, 1};
           // current context variables
-          hidden_markov_model<float_type> const& m_hmm;
+          hmm const& m_hmm;
           state_type m_current_state;
 
         public:
-          explicit sequence_generator(hidden_markov_model<float_type> const& hmm)
+          explicit sequence_generator(hmm const& hmm)
           : m_engine(std::random_device()()), m_hmm(hmm)
           {
             float_type X = m_uniform(m_engine);
-            m_current_state = find_by_distribution(m_hmm.pi, X);;
+            m_current_state = find_by_distribution(m_hmm.initial_distribution(), X);;
           }
 
           symbol_type operator()() noexcept
           {
             float_type X = m_uniform(m_engine);
             // get next symbol
-            symbol_type symbol = find_by_distribution(m_hmm.B, m_current_state, X);
+            symbol_type symbol =
+                find_by_distribution(m_hmm.symbol_probabilities(), m_current_state, X);
             // advance a state
-            m_current_state = find_by_distribution(m_hmm.A, m_current_state, X);
+            m_current_state =
+                find_by_distribution(m_hmm.transition_matrix(), m_current_state, X);
             return symbol;
           }
 
         private:
           index_type
-          find_by_distribution(const VectorX<float_type>& dist, float_type X)
+          find_by_distribution(row_vector const& dist, float_type X)
           noexcept
           {
             float_type P_fn = 0;
@@ -75,7 +81,7 @@ namespace maikel { namespace hmm {
           }
 
           index_type
-          find_by_distribution(const MatrixX<float_type>& dist, index_type row, float_type X)
+          find_by_distribution(matrix const& dist, index_type row, float_type X)
           noexcept
           {
             Expects(row < dist.rows());

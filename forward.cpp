@@ -107,13 +107,12 @@ int main(int argc, char *argv[])
     return exit_not_enough_arguments;
   }
   using float_type = double;
+  using index_type = uint8_t;
 
   // read model
   std::ifstream model_input(argv[1]);
   auto model = maikel::hmm::read_hidden_markov_model<float_type>(model_input);
 
-  // prepare reading observation sequence
-  using index_type = uint8_t;
 //  auto symbols = ranges::view::ints | ranges::view::take(model.symbols());
   std::vector<int> symbols { 1, 2 };
   std::map<int,index_type> symbol_to_index = maikel::map_from_symbols<index_type>(symbols);

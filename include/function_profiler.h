@@ -39,8 +39,8 @@ namespace maikel {
   };
 
   /**
-   * Tag functions and sum times for each execution. Im using this to make a fast
-   * and dirty profile of my functions.
+   * Tag functions and sum times for each execution. Im using this to make fast
+   * and dirty profiling for my functions.
    *
    * Example:
    *

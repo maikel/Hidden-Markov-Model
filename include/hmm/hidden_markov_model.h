@@ -18,72 +18,73 @@
 #define HIDDEN_MARKOV_MODEL_H_
 
 #include <Eigen/Dense>
-#include "type_traits.h"
-#include "gsl_util.h"
+#include <gsl_util.h>
+
+#include "hmm/stochastical_conditions.h"
 
 namespace maikel { namespace hmm {
 
+  struct hmm_errors: public std::runtime_error {
+    hmm_errors(std::string s): std::runtime_error(s) {}
+  };
 
-  template <class FloatT>
-    struct hidden_markov_model
-    {
-      using float_type             = FloatT;
-      using vector_type            = VectorX<float_type>;
-      using matrix_type            = MatrixX<float_type>;
-      using index_type             = typename matrix_type::Index;
-      using transition_matrix_type = matrix_type; // can be different to symbols for fix-size
-      using symbols_matrix_type    = matrix_type; // can be different to transition matrix for fix-size
+  struct dimensions_not_consistent: public hmm_errors {
+    dimensions_not_consistent(const std::string& a): hmm_errors(a) {}
+  };
 
-      transition_matrix_type A;
-      symbols_matrix_type B;
-      vector_type pi;
-      const index_type m_NumStates = 2;
-      const index_type m_NumSymbols = 3;
-
-      hidden_markov_model(
-          const matrix_type& transition_matrix,
-          const matrix_type& symbol_matrix,
-          const vector_type& initial_dist )
-       : A(transition_matrix.rows(), transition_matrix.cols()),
-         B(symbol_matrix.rows(), symbol_matrix.cols()),
-         pi(initial_dist.size()), m_NumStates(B.rows()), m_NumSymbols(B.cols())
+  template <class T>
+    class hidden_markov_model
       {
-        A = transition_matrix;
-        B = symbol_matrix;
-        pi = initial_dist;
-        if (!rows_are_probability_arrays(A) || !rows_are_probability_arrays(B) || !is_probability_array(pi.array()))
-          throw arguments_not_probability_arrays
-              { A, B, pi, "Some inputs in constructor do not have the stochastical property." };
-        if (A.rows() != A.cols() || A.rows() != B.rows() || A.rows() != pi.cols())
-          throw dimensions_not_consistent(
-              "Dimensions of input matrices are not consistent with each other.");
-      }
+        public:
+          using floating_point_type = T;
+          using matrix     = typename Eigen::Matrix<floating_point_type, Eigen::Dynamic, Eigen::Dynamic>;
+          using row_vector = typename Eigen::Matrix<floating_point_type, 1, Eigen::Dynamic>;
+          using size_type  = typename matrix::Index;
 
-      inline index_type states() const noexcept  { return m_NumStates;  }
-      inline index_type symbols() const noexcept { return m_NumSymbols; }
+          struct arguments_not_probability_arrays: public hmm_errors {
+              matrix m_A;
+              matrix m_B;
+              row_vector m_pi;
+              arguments_not_probability_arrays(
+                  const matrix& A,
+                  const matrix& B,
+                  const row_vector& pi,
+                  const std::string& a): hmm_errors(a), m_A{A}, m_B{B}, m_pi{pi} {}
+          };
 
-      inline const transition_matrix_type& transition_matrix()    const noexcept { return A; }
-      inline const symbols_matrix_type&    symbol_probabilities() const noexcept { return B; }
-      inline const vector_type&            initial_distribution() const noexcept { return pi; }
+          hidden_markov_model(
+              const matrix&     transition_matrix,
+              const matrix&     symbol_matrix,
+              const row_vector& initial_dist )
+           : m_A { transition_matrix },
+             m_B { symbol_matrix     },
+             m_pi{ initial_dist      },
+             m_num_states  { m_B.rows() },
+             m_num_symbols { m_B.cols() }
+          {
+            if (!rows_are_probability_arrays(m_A) || !rows_are_probability_arrays(m_B)
+                || !is_probability_array(m_pi.array()))
+              throw arguments_not_probability_arrays
+                { m_A, m_B, m_pi, "Some inputs in constructor do not have the stochastical property." };
+            if (m_A.rows() != m_A.cols() || m_A.rows() != m_B.rows() || m_A.rows() != m_pi.cols())
+              throw dimensions_not_consistent
+                { "Dimensions of input matrices are not consistent with each other." };
+          }
 
+          inline size_type states() const noexcept  { return m_num_states;  }
+          inline size_type symbols() const noexcept { return m_num_symbols; }
 
-      struct hmm_errors: public std::runtime_error {
-          hmm_errors(std::string s): std::runtime_error(s) {}
+          inline const matrix&     transition_matrix()    const noexcept { return m_A; }
+          inline const matrix&     symbol_probabilities() const noexcept { return m_B; }
+          inline const row_vector& initial_distribution() const noexcept { return m_pi; }
+
+        private:
+          matrix m_A;
+          matrix m_B;
+          row_vector m_pi;
+          size_type m_num_states;
+          size_type m_num_symbols;
       };
-      struct arguments_not_probability_arrays: public hmm_errors {
-          matrix_type m_A, m_B;
-          vector_type m_pi;
-          arguments_not_probability_arrays(
-              const matrix_type& A,
-              const matrix_type& B,
-              const vector_type& pi,
-              const std::string& a): hmm_errors(a), m_A(A), m_B(B), m_pi(pi) {}
-      };
-      struct dimensions_not_consistent: public hmm_errors {
-          dimensions_not_consistent(const std::string& a): hmm_errors(a) {}
-      };
-
-    };
 
 } // namespace hmm
 } // namespace maikel
