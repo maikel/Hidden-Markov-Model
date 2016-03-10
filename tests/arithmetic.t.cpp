@@ -17,7 +17,8 @@
 #include <cmath>
 #include <limits>
 
-#include "../include/type_traits.h"
+#include "maikel/math.h"
+#include "maikel/hmm/algorithm.h"
 #include "hidden-markov-models.t.h"
 
 namespace {
@@ -25,7 +26,7 @@ namespace {
 CASE ( "test if 0.1 and 0.10000001 are almost equal with ulp = 1" ) {
   float x = 0.1;
   float y = 0.10000001;
-  EXPECT(maikel::almost_equal(x,y,1));
+  EXPECT(maikel::almost_equal(x,y));
 }
 
 }
