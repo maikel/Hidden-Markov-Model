@@ -36,12 +36,13 @@ namespace maikel { namespace hmm {
         using symbol_type = typename I::value_type;
         using size_type   = typename model::size_type;
         using row_vector  = typename model::row_vector;
+        using value_type  = typename std::pair<T, row_vector>;
 
         struct iterator;
 
         /** \brief Providing no initial forward coefficients consumes the first symbol
          */
-        forward_input_range(I seq_begin, S seq_end, hidden_markov_model<T> const& hmm)
+        forward_input_range(I seq_begin, S seq_end, hidden_markov_model<T> const& hmm) noexcept
         : hmm_{hmm}, seq_iter_{seq_begin}, seq_end_{seq_end}, alpha_(hmm.states()), prev_alpha_(hmm.states())
         {
           if (seq_begin != seq_end)
@@ -50,7 +51,7 @@ namespace maikel { namespace hmm {
 
         /** \brief Priding initial coefficients does NOT consume a symbol.
          */
-        forward_input_range(I seq_begin, S seq_end, hidden_markov_model<T> const& hmm, row_vector const& alpha0)
+        forward_input_range(I seq_begin, S seq_end, hidden_markov_model<T> const& hmm, row_vector const& alpha0) noexcept
         : hmm_{hmm}, seq_iter_{seq_begin}, seq_end_{seq_end}, alpha_{alpha0}, prev_alpha_(hmm.states())
         {
         }
@@ -58,11 +59,11 @@ namespace maikel { namespace hmm {
         /*
          * provide standard iterator access. this defines being a range
          */
-        iterator begin()
+        inline iterator begin() noexcept
         {
           return {this};
         }
-        iterator end()
+        inline iterator end() noexcept
         {
           return {this};
         }
@@ -91,7 +92,7 @@ namespace maikel { namespace hmm {
           Expects(alpha_.size() == states);
 
           row_vector alpha(states);
-          scaling_ = 0;
+          scaling_ = 0.0;
           for (size_type i = 0; i < states; ++i) {
             alpha_(i) = pi(i)*B(i,ob);
             scaling_ += alpha_(i);
@@ -119,20 +120,20 @@ namespace maikel { namespace hmm {
           Expects(0 <= ob && ob < B.cols());
 
           // recursion formula
-          T scaling { 0 };
+          scaling_ = 0.0;
           for (size_type j = 0; j < states; ++j) {
             alpha_(j) = 0.0;
             for (size_type i = 0; i < states; ++i)
               alpha_(j) += prev_alpha_(i)*A(i,j);
             alpha_(j) *= B(j, ob);
-            scaling += alpha_(j);
+            scaling_ += alpha_(j);
           }
-          scaling = scaling ? 1/scaling : 0;
-          alpha_ *= scaling;
+          scaling_ = scaling_ ? 1/scaling_ : 0;
+          alpha_ *= scaling_;
 
           // post conditions
-          Ensures((!scaling && almost_equal<T>(alpha_.sum(), 0.0)) ||
-                  ( scaling && almost_equal<T>(alpha_.sum(), 1.0))    );
+          Ensures((!scaling_ && almost_equal<T>(alpha_.sum(), 0.0)) ||
+                  ( scaling_ && almost_equal<T>(alpha_.sum(), 1.0))    );
         }
     };
 
@@ -190,8 +191,8 @@ namespace maikel { namespace hmm {
     };
 
   template <class I, class S, class T>
-    forward_input_range<I, S, T>
-    forward(I begin, S end, hidden_markov_model<T> const& hmm)
+    inline forward_input_range<I, S, T>
+    forward(I begin, S end, hidden_markov_model<T> const& hmm) noexcept
     {
       return { begin, end, hmm };
     }
@@ -199,8 +200,8 @@ namespace maikel { namespace hmm {
   template <class Rng, class T,
              class I = ranges::range_iterator_t<Rng>,
              class S = ranges::range_sentinel_t<Rng>>
-    forward_input_range<I, S, T>
-    forward(Rng&& sequence, hidden_markov_model<T> const& hmm)
+    inline forward_input_range<I, S, T>
+    forward(Rng&& sequence, hidden_markov_model<T> const& hmm) noexcept
     {
       return { std::begin(sequence), std::end(sequence), hmm };
     }
