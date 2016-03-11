@@ -53,10 +53,18 @@ template <class float_type, class index_type>
     BOOST_LOG_TRIVIAL(info) << "Starting forward algorithm with storing scaling factors into std::vector.";
     BOOST_LOG_TRIVIAL(info) << "Use accumulate on a view::transformed scaling list.";
     MAIKEL_PROFILER;
-    std::vector<float_type> scaling;
-    scaling.reserve(sequence.size());
 
-    auto scaling_range = maikel::hmm::forward_fn<index_type, float_type>(model)(sequence);
+//    using row_vector = typename maikel::hmm::hidden_markov_model<float_type>::row_vector;
+    auto range = maikel::hmm::forward(sequence, model);
+    float_type logprob = 0;
+    for (auto it = std::begin(range); it != std::end(range); ++it) {
+      float_type scaling;
+      std::tie(scaling, std::ignore) = *it;
+      logprob += std::log(scaling);
+    }
+    std::cout << -logprob << std::endl;
+
+//    auto scaling_range = maikel::hmm::forward_fn<index_type, float_type>(model)(sequence);
 //    { MAIKEL_NAMED_PROFILER("logarithm_by_view");
 //        float_type log_probability = ranges::accumulate(scaling | ranges::view::transform(my_log), 0.0);
 //        BOOST_LOG_TRIVIAL(info) << "log P(O|model) = " << -log_probability;
@@ -106,7 +114,7 @@ int main(int argc, char *argv[])
     std::cerr << "Usage: " << argv[0] << " <model.dat> <sequence.dat>\n";
     return exit_not_enough_arguments;
   }
-  using float_type = double;
+  using float_type = float;
   using index_type = uint8_t;
 
   // read model
@@ -114,7 +122,7 @@ int main(int argc, char *argv[])
   auto model = maikel::hmm::read_hidden_markov_model<float_type>(model_input);
 
 //  auto symbols = ranges::view::ints | ranges::view::take(model.symbols());
-  std::vector<int> symbols { 1, 2 };
+  std::vector<int> symbols { 0, 1 };
   std::map<int,index_type> symbol_to_index = maikel::map_from_symbols<index_type>(symbols);
   std::ifstream sequence_input(argv[2]);
   BOOST_LOG_TRIVIAL(info) << "Reading sequence ...";

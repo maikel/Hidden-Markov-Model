@@ -37,7 +37,7 @@ namespace maikel {
       IndexType max_index = ranges::max( map | ranges::view::values );
       std::vector<std::size_t> histogram(max_index+1);
       for (IndexType index : map|ranges::view::values)
-        ++gsl::at(histogram,index);
+        ++histogram[index];
       return ranges::all_of(histogram, [](std::size_t count){ return count == 1; });
     }
 

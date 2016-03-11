@@ -17,127 +17,187 @@
 #ifndef HMM_ALGORITHM_FORWARD_H_
 #define HMM_ALGORITHM_FORWARD_H_
 
-#include <pair>
-#include <range/v3/utility/static_const.hpp>
-#include <range/v3/core.hpp>
-#include <range/v3/view/concat.hpp>
-#include <range/v3/view/tail.hpp>
-#include <range/v3/view/take.hpp>
-#include <range/v3/view/transform.hpp>
+#include <utility>
+#include <range/v3/all.hpp>
+#include <range/v3/utility/concepts.hpp>
 #include <gsl_assert.h>
+//#include <gsl.h>
 #include "maikel/function_profiler.h"
 #include "maikel/hmm/hidden_markov_model.h"
 
 namespace maikel { namespace hmm {
 
-  template <class F, class I, class S>
-    class forward_coefficients {
+  namespace detail {
+    template <class T, class S,
+               class RowVector = typename hidden_markov_model<T>::row_vector>
+      std::pair<T, RowVector>
+      initial_forward_coefficient(S s, hidden_markov_model<T> const& hmm) noexcept
+      {
+        using size_type = typename hidden_markov_model<T>::size_type;
+        auto const& B  = hmm.symbol_probabilities();
+        auto const& pi = hmm.initial_distribution();
+
+        // check pre conditions
+        Expects(B.rows() == pi.size());
+        size_type states = pi.size();
+        size_type ob = gsl::narrow<size_type>(s);
+        Expects(0 <= ob && ob < B.cols());
+
+        RowVector alpha(states);
+        T scaling { 0 };
+        for (size_type i = 0; i < states; ++i) {
+          alpha(i) = pi(i)*B(i,ob);
+          scaling += alpha(i);
+        }
+        scaling = scaling ? 1/scaling : 0;
+        alpha *= scaling;
+
+        // check post conditions
+        Ensures((!scaling && almost_equal<T>(alpha.sum(), 0.0)) ||
+                ( scaling && almost_equal<T>(alpha.sum(), 1.0))    );
+        return std::make_pair(scaling, alpha);
+      }
+
+    template <class T, class S,
+               class RowVector = typename hidden_markov_model<T>::row_vector>
+      T recursion_formula_forward_coefficients(
+          S s,                          // input
+          RowVector& alpha,             // output
+          RowVector const& prev_alpha, // input
+          hidden_markov_model<T> const& hmm) noexcept // input
+      {
+        using size_type = typename hidden_markov_model<T>::size_type;
+        auto const& A = hmm.transition_matrix();
+        auto const& B = hmm.symbol_probabilities();
+
+        // check pre conditions
+        size_type states = A.rows();
+        Expects(A.cols() == states);
+        Expects(B.rows() == states);
+        Expects(prev_alpha.size() == states);
+        size_type ob = gsl::narrow<size_type>(s);
+        Expects(0 <= ob && ob < B.cols());
+
+        // recursion formula
+        T scaling { 0 };
+        for (size_type j = 0; j < states; ++j) {
+          alpha(j) = 0.0;
+          for (size_type i = 0; i < states; ++i)
+            alpha(j) += prev_alpha(i)*A(i,j);
+          alpha(j) *= B(j, ob);
+          scaling += alpha(j);
+        }
+        scaling = scaling ? 1/scaling : 0;
+        alpha *= scaling;
+
+        // post conditions
+        Ensures((!scaling && almost_equal<T>(alpha.sum(), 0.0)) ||
+                ( scaling && almost_equal<T>(alpha.sum(), 1.0))    );
+        return scaling;
+      }
+  }
+
+  /** \brief the forward range is not a container but a lazy representation of
+   *         the recursive forward algorithm for hidden markov models.
+   */
+  template <class I, class S, class T>
+    class forward_iterable {
       public:
-        using model       = typename hidden_markov_model<F>;
-        using matrix      = typename model::matrix;
-        using row_vector  = typename model::row_vector;
-        using size_type   = typename model::size_type;
-        using symbol_type     = typename ranges::iterator_value_t<I>;
-        using symbol_iterator = typename I;
-        using symbol_sentinel = typename S;
-        using value_type = typename std::pair<F, row_vector>;
+        using row_vector  = typename hidden_markov_model<T>::row_vector;
+        using size_type   = typename hidden_markov_model<T>::size_type;
 
-        class iterator : public std::iterator<std::forward_iterator_tag, value_type> {
-          public:
-            model const& hmm_;
-            symbol_iterator symbol_;
-            symbol_sentinel const symbol_end_;
-            std::pair<F, row_vector> scaled_alpha_;
+        /** \brief the forward range iterator is an abstract pointer to the
+         *         current coefficients calculated by the hmm algorithm.
+         *
+         *  Each time the iterator gets incremented it we apply the recursion
+         *  formula on the current forward coefficients and change them.
+         */
+        struct const_iterator
+            : public std::iterator<std::input_iterator_tag, std::pair<T, row_vector>> {
+          forward_iterable* parent_;
 
-            bool operator==(S end) { return symbol_ == symbol_end_; }
-            bool operator!=(S end) { return symbol_ != symbol_end_; }
-            value_type const& operator*() { return scaled_alpha_; }
+          const_iterator(forward_iterable* parent): parent_(parent)
+          {
+          }
 
-            iterator& operator++()
-            {
-              scaled_alpha_ = recursion_formula(*symbol_++);
-              return *this;
-            }
+          /** \brief dereference the forward iterator to the current pair of
+           *         scaling factors and coefficients.
+           */
+          std::pair<T, row_vector> operator*() const noexcept
+          {
+            return {parent_->scaling_, parent_->alpha_};
+          }
 
-            iterator operator++(int)
-            {
-              iterator tmp(*this);
-              scaled_alpha = recursion_formula(*symbol++);
-              return tmp;
-            }
+          /** \brief advancing the iterator means changing the iterable.
+           *
+           *  You shall not return!
+           */
+          const_iterator& operator++() noexcept
+          {
+            parent_->scaling_ = maikel::hmm::detail::recursion_formula_forward_coefficients(
+                *(parent_->seq_iter_), parent_->prev_alpha_, parent_->alpha_, parent_->hmm_);
+            ++parent_->seq_iter_;
+            parent_->alpha_.swap(parent_->prev_alpha_);
+            return *this;
+          }
 
-          private:
-            std::pair<F,row_vector>
-            recursion_formula(symbol_type s) noexcept
-            {
-              matrix const& A = hmm.transition_matrix();
-              matrix const& B = hmm.symbol_probabilities();
-
-              // check pre conditions
-              size_type states = A.rows();
-              Expects(A.cols() == states);
-              Expects(B.rows() == states);
-              Expects(alpha.size() == states);
-              size_type ob = gsl::narrow<size_type>(s);
-              Expects(0 <= ob && ob < B.cols());
-
-              // recursion formula
-              row_vector next_alpha(alpha.size());
-              F scaling { 0 };
-              for (size_type j = 0; j < states; ++j) {
-                next_alpha(j) = 0.0;
-                for (size_type i = 0; i < states; ++i)
-                  next_alpha(j) += alpha(i)*A(i,j);
-                next_alpha(j) *= B(j, ob);
-                scaling += next_alpha(j);
-              }
-              scaling = scaling ? 1/scaling : 0;
-              next_alpha *= scaling;
-
-              // post conditions
-              Ensures((!scaling && almost_equal<F>(next_alpha.sum(), 0.0)) ||
-                      ( scaling && almost_equal<F>(next_alpha.sum(), 1.0))    );
-              alpha.swap(next_alpha);
-              return std::make_pair(scaling, alpha);
-            }
+          bool operator==(S const& sentinel) const noexcept
+          {
+            return parent_->seq_iter_ == sentinel;
+          }
+          bool operator!=(S const& sentinel) const noexcept
+          {
+            return parent_->seq_iter_ != sentinel;
+          }
         };
 
-        model const& hmm_;
-        symbol_iterator sbegin_;
-        symbol_sentinel send_;
-
-      private:
-        std::pair<F, row_vector>
-        initial_alpha(symbol_type s) noexcept
+        forward_iterable(I seq_begin, S seq_end, hidden_markov_model<T> const& hmm)
+        : hmm_{hmm}, seq_iter_{seq_begin}, seq_end_{seq_end}
         {
-          matrix const& B      = hmm_.symbol_probabilities();
-          row_vector const& pi = hmm_.initial_distribution();
-
-          // check pre conditions
-          Expects(B.rows() == pi.size());
-          size_type states = pi.size();
-          size_type ob = gsl::narrow<size_type>(s);
-          Expects(0 <= ob && ob < B.cols());
-
-          row_vector alpha_0(states);
-          F scaling { 0 };
-          for (size_type i = 0; i < states; ++i) {
-            alpha_0(i) = pi(i)*B(i,ob);
-            scaling += alpha_0(i);
+          if (seq_begin != seq_end) {
+            std::tie(scaling_, alpha_) = detail::initial_forward_coefficient(*seq_iter_, hmm_);
+            ++seq_iter_;
+            prev_alpha_ = alpha_;
           }
-          scaling = scaling ? 1/scaling : 0;
-          alpha_0 *= scaling;
-
-          // check post conditions
-          Ensures((!scaling && almost_equal<F>(alpha_0.sum(), 0.0)) ||
-                  ( scaling && almost_equal<F>(alpha_0.sum(), 1.0))    );
-          alpha_.swap(alpha_0);
-          return std::make_pair(scaling, alpha_);
         }
 
+        const_iterator begin()
+        {
+          return {this};
+        }
 
-      };
+        S end()
+        {
+          return seq_end_;
+        }
 
+      private:
+
+        hidden_markov_model<T> const& hmm_;
+        I seq_iter_;
+        S seq_end_;
+        row_vector alpha_;
+        T          scaling_;
+        // keeping the previous values here prevents reallocation in each recursion step
+        row_vector prev_alpha_;
+//        T          prev_scaling
+    };
+
+  template <class I, class S, class T>
+    forward_iterable<I, S, T>
+    forward(I begin, S end, hidden_markov_model<T> const& hmm)
+    {
+      return forward_iterable<I, S, T>(begin, end, hmm);
+    }
+
+  template <class Rng, class T,
+             class I = ranges::range_iterator_t<Rng>,
+             class S = ranges::range_sentinel_t<Rng>>
+    forward_iterable<I, S, T>
+    forward(Rng&& sequence, hidden_markov_model<T> const& hmm)
+    {
+      return forward_iterable<I, S, T>(std::begin(sequence), std::end(sequence), hmm);
+    }
 
 //  }
 } // namespace hmm

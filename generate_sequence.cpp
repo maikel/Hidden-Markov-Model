@@ -19,9 +19,9 @@
 
 #include <boost/iterator/function_input_iterator.hpp>
 
-#include "hmm/hidden_markov_model.h"
-#include "hmm/sequence_generator.h"
-#include "hmm/io.h"
+#include "maikel/hmm/hidden_markov_model.h"
+#include "maikel/hmm/sequence_generator.h"
+#include "maikel/hmm/io.h"
 
 enum Exit_Error_Codes {
   exit_success = 0,

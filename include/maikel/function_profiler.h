@@ -17,7 +17,6 @@
 #ifndef INCLUDE_FUNCTION_PROFILER_H_
 #define INCLUDE_FUNCTION_PROFILER_H_
 
-
 #include <chrono>
 #include <map>
 

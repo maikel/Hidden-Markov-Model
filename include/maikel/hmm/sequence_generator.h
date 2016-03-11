@@ -14,12 +14,11 @@
  * limitations under the License.
  */
 
-#include <random>
-
-#include "hmm/hidden_markov_model.h"
-
 #ifndef HMM_SEQUENCE_GENERATOR_H_
 #define HMM_SEQUENCE_GENERATOR_H_
+
+#include <random>
+#include "maikel/hmm/hidden_markov_model.h"
 
 namespace maikel { namespace hmm {
 
