@@ -19,10 +19,14 @@
 
 #include <map>
 #include <range/v3/core.hpp>
+#include <range/v3/algorithm.hpp>
+#include <range/v3/view/map.hpp>
+#include <range/v3/view/unique.hpp>
+#include <gsl_util.h>
 
-#include "hmm/algorithm/forward.h"
-#include "hmm/algorithm/backward.h"
-#include "hmm/algorithm/baum_welch.h"
+#include "maikel/hmm/algorithm/forward.h"
+// #include "hmm/algorithm/backward.h"
+// #include "hmm/algorithm/baum_welch.h"
 
 namespace maikel {
 
@@ -33,7 +37,7 @@ namespace maikel {
       IndexType max_index = ranges::max( map | ranges::view::values );
       std::vector<std::size_t> histogram(max_index+1);
       for (IndexType index : map|ranges::view::values)
-        ++gsl::at(histogram,index);
+        ++histogram[index];
       return ranges::all_of(histogram, [](std::size_t count){ return count == 1; });
     }
 

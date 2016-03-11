@@ -16,12 +16,12 @@
 
 #include <iostream>
 #include <limits>
-#include "function_profiler.h"
+#include "maikel/function_profiler.h"
 
 
 void barfoo()
 {
-  maikel::function_profiler(__PRETTY_FUNCTION__);
+  maikel::function_profiler(__PRETTY_FUNCTION__, __FILE__);
   std::size_t max = 200000000;
   std::size_t n = 0;
   for (std::size_t i = 0; i < max; ++i) n += i;
@@ -29,7 +29,7 @@ void barfoo()
 
 void foobar()
 {
-  maikel::function_profiler(__PRETTY_FUNCTION__);
+  maikel::function_profiler(__PRETTY_FUNCTION__, __FILE__);
   int max = 20000;
   int n = 0;
   for (int i = 0; i < max; ++i) n += i*i;

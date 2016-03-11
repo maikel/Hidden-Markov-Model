@@ -17,7 +17,6 @@
 #ifndef INCLUDE_FUNCTION_PROFILER_H_
 #define INCLUDE_FUNCTION_PROFILER_H_
 
-
 #include <chrono>
 #include <map>
 
@@ -39,8 +38,8 @@ namespace maikel {
   };
 
   /**
-   * Tag functions and sum times for each execution. Im using this to make a fast
-   * and dirty profile of my functions.
+   * Tag functions and sum times for each execution. Im using this to make fast
+   * and dirty profiling for my functions.
    *
    * Example:
    *

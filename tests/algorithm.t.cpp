@@ -19,8 +19,8 @@
 #include <tuple>
 #include <vector>
 #include <Eigen/Dense>
-#include "hmm/hidden_markov_model.h"
-#include "hmm/algorithm.h"
+#include "maikel/hmm/hidden_markov_model.h"
+#include "maikel/hmm/algorithm.h"
 
 namespace {
 

@@ -18,8 +18,8 @@
 
 #include <fstream>
 #include <Eigen/Dense>
-#include "../include/hmm/io.h"
-#include "hmm/hidden_markov_model.h"
+#include "maikel/hmm/io.h"
+#include "maikel/hmm/hidden_markov_model.h"
 
 CASE ( "Can read the text file 'A.dat' and create a dynamic allocated matrix." )
 {

@@ -14,19 +14,24 @@
  * limitations under the License.
  */
 
+#ifndef MATH_H_
+#define MATH_H_
+
+#include <type_traits>
 #include <cmath>
 #include <limits>
 
-#include "maikel/math.h"
-#include "maikel/hmm/algorithm.h"
-#include "hidden-markov-models.t.h"
+namespace maikel {
 
-namespace {
-
-CASE ( "test if 0.1 and 0.10000001 are almost equal with ulp = 1" ) {
-  float x = 0.1;
-  float y = 0.10000001;
-  EXPECT(maikel::almost_equal(x,y));
-}
+  template <class T, std::size_t ulp = 1>
+    // requires FloatingPoint<T>
+    inline typename std::enable_if<std::is_floating_point<T>::value, bool>::type
+    almost_equal(T x, T y) noexcept
+    {
+      return std::abs(x-y) < std::numeric_limits<T>::epsilon() * std::abs(x+y) * ulp;
+    }
 
 }
+
+
+#endif /* MATH_H_ */

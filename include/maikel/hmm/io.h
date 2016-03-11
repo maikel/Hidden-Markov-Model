@@ -24,8 +24,8 @@
 #include <gsl_assert.h>
 #include <range/v3/all.hpp>
 
-#include "hidden_markov_model.h"
-#include "function_profiler.h"
+#include "maikel/hmm/hidden_markov_model.h"
+#include "maikel/function_profiler.h"
 
 namespace maikel { namespace hmm {
 
@@ -68,19 +68,19 @@ namespace maikel { namespace hmm {
     typename std::enable_if<
         std::is_floating_point<float_type>::value,
     Eigen::Matrix<float_type, Eigen::Dynamic, Eigen::Dynamic>>::type
-    read_ascii_matrix(std::istream& in, size_t rows, size_t cols)
+    read_ascii_matrix(std::istream& in, std::size_t rows, std::size_t cols)
     {
       Expects(in);
-      MatrixX<float_type> matrix(rows, cols);
+      typename Eigen::Matrix<float_type, Eigen::Dynamic, Eigen::Dynamic> matrix(rows, cols);
       std::istringstream line;
-      for (size_t i = 0; i < rows; ++i) {
+      for (std::size_t i = 0; i < rows; ++i) {
         getline(in, line);
-        for (size_t j = 0; j < cols; ++j)
+        for (std::size_t j = 0; j < cols; ++j)
           if (!(line >> matrix(i,j)))
             throw read_ascii_matrix_error("Could not read entries in line: " + line.str() + ".");
       }
-      Ensures(gsl::narrow<size_t>(matrix.rows()) == rows &&
-              gsl::narrow<size_t>(matrix.cols()) == cols);
+      Ensures(gsl::narrow<std::size_t>(matrix.rows()) == rows &&
+              gsl::narrow<std::size_t>(matrix.cols()) == cols);
       return matrix;
     }
 
@@ -91,14 +91,15 @@ namespace maikel { namespace hmm {
     read_hidden_markov_model(std::istream& in)
     {
       Expects(in);
-      using matrix = typename hidden_markov_model<float_type>::matrix_type;
-      using index = typename hidden_markov_model<float_type>::index_type;
+      using matrix     = typename hidden_markov_model<float_type>::matrix;
+      using row_vector = typename hidden_markov_model<float_type>::row_vector;
+      using index      = typename hidden_markov_model<float_type>::size_type;
       index states;
       index symbols;
       std::tie(states, symbols) = getdims<index>(in);
       matrix A  = read_ascii_matrix<float_type>(in, states, states);
       matrix B  = read_ascii_matrix<float_type>(in, states, symbols);
-      matrix pi = read_ascii_matrix<float_type>(in, 1, states);
+      row_vector pi = read_ascii_matrix<float_type>(in, 1, states);
       Ensures(A.rows() == states && A.cols() == states);
       Ensures(B.rows() == states && B.cols() == symbols);
       Ensures(pi.rows() == 1 && pi.cols() == states);
@@ -111,7 +112,6 @@ namespace maikel { namespace hmm {
     void>::type
     print_model_parameters(std::ostream& out, hidden_markov_model<float_type> const& model)
     {
-      out << "epsilon: " << std::numeric_limits<float_type>::epsilon() << "\n";
       out << "N= " << model.states() << "\n";
       out << "M= " << model.symbols() << "\n";
       out << "A:\n" << model.A << "\n";
@@ -138,8 +138,8 @@ namespace maikel { namespace hmm {
       MAIKEL_PROFILER;
       std::vector<Integral> sequence;
       sequence.reserve(read_sequence_length<std::size_t>(in));
-      auto symbol_map = [&symbol_to_index] (Symbol const& s) {
-          auto found = symbol_to_index.find(s);
+      auto symbol_map = [&symbol_to_index] (Symbol const& symbol) {
+          auto found = symbol_to_index.find(symbol);
           if (found == symbol_to_index.end())
             throw read_sequence_error("Unkown Symbols in Input.");
           return found->second;

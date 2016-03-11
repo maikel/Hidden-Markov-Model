@@ -19,10 +19,9 @@
 
 #include <boost/iterator/function_input_iterator.hpp>
 
-#include "hmm/hidden_markov_model.h"
-#include "hmm/sequence_generator.h"
-#include "hmm/io.h"
-#include "type_traits.h"
+#include "maikel/hmm/hidden_markov_model.h"
+#include "maikel/hmm/sequence_generator.h"
+#include "maikel/hmm/io.h"
 
 enum Exit_Error_Codes {
   exit_success = 0,
@@ -37,41 +36,27 @@ int main(int argc, char *argv[])
     std::cerr << "Usage: " << argv[0] << " <model.dat> <sequence-length>\n";
     return exit_not_enough_arguments;
   }
+  std::ifstream input(argv[1]);
+  input.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+  auto model = maikel::hmm::read_hidden_markov_model<float>(input);
+  input.close();
 
-  try {
+  // Try to read the HMM-model that will be used to generate a random sequence.
 
-    std::ifstream input(argv[1]);
-    input.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-    auto model = maikel::hmm::read_hidden_markov_model<float>(input);
-    input.close();
-
-    // Try to read the HMM-model that will be used to generate a random sequence.
-
-    std::istringstream obslen_converter(argv[2]);
-    std::size_t obslen;
-    if (!(obslen_converter >> obslen) || obslen == 0) {
-      std::cerr << "Could not convert sequence length to std::size_t.\n";
-      return exit_argument_error;
-    }
-
-    using Index = decltype(model)::index_type;
-    std::function<Index()> generator = maikel::hmm::make_sequence_generator(model);
-    std::cout << obslen << "\n";
-    std::copy(boost::make_function_input_iterator(generator, std::size_t{0}),
-              boost::make_function_input_iterator(generator, obslen),
-              std::ostream_iterator<Index>(std::cout, " "));
-    std::cout << std::endl;
-
-  } catch (maikel::hmm::hidden_markov_model<float>::arguments_not_probability_arrays& e) {
-    std::cerr << "Error caught while creating HMM ...\n";
-    std::cerr << std::boolalpha
-              << "A (is stochastical matrix: " << maikel::rows_are_probability_arrays(e.m_A)
-              << "):\n" << e.m_A << std::endl;
-    std::cerr << "B: (is stochastical matrix: " << maikel::rows_are_probability_arrays(e.m_B)
-              << "):\n" << e.m_B << std::endl;
-    std::cerr << "pi: (is probability array: " << maikel::is_probability_array(e.m_pi.array())
-              << ")\n" << e.m_pi << std::endl;
+  std::istringstream obslen_converter(argv[2]);
+  std::size_t obslen;
+  if (!(obslen_converter >> obslen) || obslen == 0) {
+    std::cerr << "Could not convert sequence length to std::size_t.\n";
+    return exit_argument_error;
   }
+
+  using Index = decltype(model)::size_type;
+  std::function<Index()> generator = maikel::hmm::make_sequence_generator(model);
+  std::cout << obslen << "\n";
+  std::copy(boost::make_function_input_iterator(generator, std::size_t{0}),
+            boost::make_function_input_iterator(generator, obslen),
+            std::ostream_iterator<Index>(std::cout, " "));
+  std::cout << std::endl;
 
   return exit_success;
 }
