@@ -143,13 +143,13 @@ namespace maikel { namespace hmm {
             return *this;
           }
 
-          bool operator==(S const& sentinel) const noexcept
+          bool operator==(const_iterator const& sentinel) const noexcept
           {
-            return parent_->seq_iter_ == sentinel;
+            return parent_->seq_iter_ == sentinel.parent_->seq_end_;
           }
-          bool operator!=(S const& sentinel) const noexcept
+          bool operator!=(const_iterator const& sentinel) const noexcept
           {
-            return parent_->seq_iter_ != sentinel;
+            return parent_->seq_iter_ != sentinel.parent_->seq_end_;
           }
         };
 
@@ -167,9 +167,9 @@ namespace maikel { namespace hmm {
           return {this};
         }
 
-        S end()
+        const_iterator end()
         {
-          return seq_end_;
+          return {this};
         }
 
       private:

@@ -54,14 +54,11 @@ template <class float_type, class index_type>
     BOOST_LOG_TRIVIAL(info) << "Use accumulate on a view::transformed scaling list.";
     MAIKEL_PROFILER;
 
-//    using row_vector = typename maikel::hmm::hidden_markov_model<float_type>::row_vector;
+    using row_vector = typename maikel::hmm::hidden_markov_model<float_type>::row_vector;
     auto range = maikel::hmm::forward(sequence, model);
     float_type logprob = 0;
-    for (auto it = std::begin(range); it != std::end(range); ++it) {
-      float_type scaling;
-      std::tie(scaling, std::ignore) = *it;
-      logprob += std::log(scaling);
-    }
+    for (std::pair<float_type, row_vector const&> const& p : range)
+      logprob += p.first;
     std::cout << -logprob << std::endl;
 
 //    auto scaling_range = maikel::hmm::forward_fn<index_type, float_type>(model)(sequence);
@@ -114,7 +111,7 @@ int main(int argc, char *argv[])
     std::cerr << "Usage: " << argv[0] << " <model.dat> <sequence.dat>\n";
     return exit_not_enough_arguments;
   }
-  using float_type = float;
+  using float_type = double;
   using index_type = uint8_t;
 
   // read model
