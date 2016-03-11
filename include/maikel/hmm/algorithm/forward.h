@@ -134,10 +134,12 @@ namespace maikel { namespace hmm {
            */
           const_iterator& operator++() noexcept
           {
-            parent_->scaling_ = maikel::hmm::detail::recursion_formula_forward_coefficients(
-                *(parent_->seq_iter_), parent_->prev_alpha_, parent_->alpha_, parent_->hmm_);
             ++parent_->seq_iter_;
-            parent_->alpha_.swap(parent_->prev_alpha_);
+            if (parent_->seq_iter_ != parent_->seq_end_) {
+              parent_->scaling_ = maikel::hmm::detail::recursion_formula_forward_coefficients(
+                  *(parent_->seq_iter_), parent_->prev_alpha_, parent_->alpha_, parent_->hmm_);
+              parent_->alpha_.swap(parent_->prev_alpha_);
+            }
             return *this;
           }
 
@@ -156,7 +158,6 @@ namespace maikel { namespace hmm {
         {
           if (seq_begin != seq_end) {
             std::tie(scaling_, alpha_) = detail::initial_forward_coefficient(*seq_iter_, hmm_);
-            ++seq_iter_;
             prev_alpha_ = alpha_;
           }
         }
