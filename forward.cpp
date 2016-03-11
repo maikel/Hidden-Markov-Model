@@ -57,7 +57,7 @@ template <class float_type, class index_type>
     using row_vector = typename maikel::hmm::hidden_markov_model<float_type>::row_vector;
     auto range = maikel::hmm::forward(sequence, model);
     float_type logprob = 0;
-    for (std::pair<float_type, row_vector const&> const& p : range)
+    for (std::pair<float_type, row_vector const&> p : range)
       logprob += p.first;
     std::cout << -logprob << std::endl;
 
