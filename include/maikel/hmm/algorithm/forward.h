@@ -123,7 +123,7 @@ namespace maikel { namespace hmm {
           /** \brief dereference the forward iterator to the current pair of
            *         scaling factors and coefficients.
            */
-          std::pair<T, row_vector> operator*() const noexcept
+          std::pair<T, row_vector const&> operator*() const noexcept
           {
             return {parent_->scaling_, parent_->alpha_};
           }
