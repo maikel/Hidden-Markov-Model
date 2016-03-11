@@ -115,7 +115,7 @@ int main(int argc, char *argv[])
   // prepare reading observation sequence
   using index_type = uint8_t;
 //  auto symbols = ranges::view::ints | ranges::view::take(model.symbols());
-  std::vector<int> symbols { 1, 2 };
+  std::vector<int> symbols { 0,1 };
   std::map<int,index_type> symbol_to_index = maikel::map_from_symbols<index_type>(symbols);
   std::ifstream sequence_input(argv[2]);
   BOOST_LOG_TRIVIAL(info) << "Reading sequence ...";
