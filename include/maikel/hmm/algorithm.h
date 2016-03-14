@@ -25,7 +25,7 @@
 #include <gsl_util.h>
 
 #include "maikel/hmm/algorithm/forward.h"
-// #include "hmm/algorithm/backward.h"
+#include "maikel/hmm/algorithm/backward.h"
 // #include "hmm/algorithm/baum_welch.h"
 
 namespace maikel {
@@ -45,7 +45,6 @@ namespace maikel {
   using ValueType = typename std::remove_reference<T>::type::value_type;
 
   template <class Index, class Range, class T = ranges::range_value_t<Range>>
-      // requires UnsignedIntegral<IndexType> && InputRange<SymbolRange>
     std::map<T,Index>
     map_from_symbols(Range&& range)
     {

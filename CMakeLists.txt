@@ -19,5 +19,8 @@ add_compile_options( -Wall -Wpedantic -std=c++11 )
 add_executable(generate_sequence generate_sequence.cpp)
 
 add_executable(forward forward.cpp include/maikel/function_profiler.cpp)
-target_link_libraries(forward boost_log pthread)
+target_link_libraries(forward boost_log pthread stxxl)
 target_compile_options(forward PUBLIC -DBOOST_LOG_DYN_LINK)
+
+add_executable(testfb forward_backward.cpp include/maikel/function_profiler.cpp)
+target_compile_options(testfb PUBLIC "-Wpedantic" "-Werror" "-Wfatal-errors" "-pedantic-errors")
