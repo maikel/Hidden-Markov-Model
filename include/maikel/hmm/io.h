@@ -23,6 +23,7 @@
 #include <Eigen/Dense>
 #include <gsl_assert.h>
 #include <range/v3/all.hpp>
+#include <iostream>
 
 #include "maikel/hmm/hidden_markov_model.h"
 #include "maikel/function_profiler.h"
@@ -57,8 +58,7 @@ namespace maikel { namespace hmm {
     {
       Expects(in);
       std::pair<size_type, size_type> dim;
-      std::istringstream line;
-      getline(in, line);
+      std::istringstream line(ranges::front(ranges::getlines(in)));
       if (!(line >> dim.first >> dim.second))
         throw read_ascii_matrix_error("Could not read dimensions.");
       return dim;
@@ -84,6 +84,15 @@ namespace maikel { namespace hmm {
       return matrix;
     }
 
+  template <class Derived>
+    Eigen::DenseBase<Derived>& normalize_rows(Eigen::DenseBase<Derived>& matrix)
+    {
+      using Index = typename Eigen::DenseBase<Derived>::Index;
+      for (Index i = 0; i < matrix.rows(); ++i)
+        matrix.row(i) /= matrix.row(i).sum();
+      return matrix;
+    }
+
   template <class float_type>
     typename std::enable_if<
         std::is_floating_point<float_type>::value,
@@ -96,10 +105,15 @@ namespace maikel { namespace hmm {
       using index      = typename hidden_markov_model<float_type>::size_type;
       index states;
       index symbols;
+
       std::tie(states, symbols) = getdims<index>(in);
       matrix A  = read_ascii_matrix<float_type>(in, states, states);
       matrix B  = read_ascii_matrix<float_type>(in, states, symbols);
       row_vector pi = read_ascii_matrix<float_type>(in, 1, states);
+      normalize_rows(A);
+      normalize_rows(B);
+      normalize_rows(pi);
+
       Ensures(A.rows() == states && A.cols() == states);
       Ensures(B.rows() == states && B.cols() == symbols);
       Ensures(pi.rows() == 1 && pi.cols() == states);

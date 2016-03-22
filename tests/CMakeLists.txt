@@ -8,7 +8,7 @@ include_directories  ( "${PROJECT_SOURCE_DIR}/../third_party/eigen"
                        "${PROJECT_SOURCE_DIR}/../third_party/lest/include/lest"
                        "${PROJECT_SOURCE_DIR}/../include" )
 
-set( SOURCES hidden-markov-models.t.cpp arrays.t.cpp arithmetic.t.cpp iodata.t.cpp ) #algorithm.t.cpp )
+set( SOURCES hidden-markov-models.t.cpp arrays.t.cpp arithmetic.t.cpp iodata.t.cpp algorithm.t.cpp )
 
 add_compile_options( -Wall -Wno-missing-braces -std=c++11 )
 add_compile_options( -g -DGSL_THROW_ON_CONTRACT_VIOLATION )

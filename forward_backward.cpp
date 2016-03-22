@@ -50,7 +50,7 @@ calculate_forward_coeff(
 {
   MAIKEL_PROFILER;
   cout << "Calculate and Write data for forward coefficients ...\n";
-  for (auto&& coeff : hmm::forward(seq, hmm)) {
+  for (auto&& coeff : hmm::forward(begin(seq), end(seq), hmm)) {
     double factor = coeff.first;
     model::row_vector const& alpha = coeff.second;
     scaling.write(reinterpret_cast<char*>(&factor), sizeof(factor));
@@ -64,8 +64,9 @@ calculate_backward_coeff(
 {
   MAIKEL_PROFILER;
   cout << "Calculate and Write data for backward coefficients ...\n";
-  for (auto&& coeff : hmm::backward(begin(seq), begin(seq)+scaling.size(), begin(scaling), hmm))
+  for (auto&& coeff : hmm::backward(begin(seq), begin(seq)+scaling.size(), scaling.rbegin(), hmm)) {
     betas.write(reinterpret_cast<const char*>(coeff.data()), sizeof(double)*hmm.states());
+  }
 }
 
 vector<double>

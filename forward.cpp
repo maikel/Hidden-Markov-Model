@@ -3,6 +3,7 @@
 #include <vector>
 #include <fstream>
 #include <cmath>
+#include <iterator>
 
 #include <boost/iterator/transform_iterator.hpp>
 #include <boost/iterator/function_input_iterator.hpp>
@@ -61,31 +62,34 @@ void read_alphas_from_bin(const maikel::hmm::hidden_markov_model<T>& hmm)
 
 int main(int argc, char *argv[])
 {
+  using namespace std;
+  using namespace maikel::hmm;
 
   if (argc < 3) {
-    std::cerr << "Usage: " << argv[0] << " <model.dat> <sequence.dat>\n";
+    cerr << "Usage: " << argv[0] << " <model.dat> <sequence.dat>\n";
     return exit_not_enough_arguments;
   }
   using float_type = double;
   using index_type = uint8_t;
 
   // read model
-  std::ifstream model_input(argv[1]);
-  auto model = maikel::hmm::read_hidden_markov_model<float_type>(model_input);
+  ifstream model_input(argv[1]);
+  auto model = read_hidden_markov_model<float_type>(model_input);
 
-  std::vector<int> symbols { 0,1 };
-  std::map<int,index_type> symbol_to_index = maikel::map_from_symbols<index_type>(symbols);
-  std::ifstream sequence_input(argv[2]);
-  BOOST_LOG_TRIVIAL(info) << "Reading sequence ...";
-  std::vector<index_type> sequence = maikel::hmm::read_sequence(sequence_input, symbol_to_index);
-  BOOST_LOG_TRIVIAL(info) << "Done. Sequence length is " << sequence.size() << " ("
-      << sequence.size() / sizeof(index_type) / 1024 / 1024 << " mega bytes)";
-  maikel::function_profiler::print_statistics(std::cerr);
+  vector<int> symbols { 0,1 };
+  map<int,index_type> symbol_to_index = maikel::map_from_symbols<index_type>(symbols);
+  ifstream sequence_input(argv[2]);
+  vector<index_type> sequence = read_sequence(sequence_input, symbol_to_index);
 
-  maikel::function_profiler::reset();
-  accumulate_scaling_and_write_alpha_to_file(sequence, model);
-  read_alphas_from_bin(model);
-  maikel::function_profiler::print_statistics(std::cerr);
+  {
+    MAIKEL_NAMED_PROFILER("v2::forward");
+    float_type scaling = 0;
+    for (auto&& alpha : forward(begin(sequence), end(sequence), model)) {
+      scaling += log(alpha.first);
+    }
+    cout << -scaling << endl;
+  }
+  maikel::function_profiler::print_statistics(cout);
 
   return exit_success;
 }

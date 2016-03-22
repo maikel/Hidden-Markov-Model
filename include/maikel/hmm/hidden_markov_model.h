@@ -36,9 +36,8 @@ namespace maikel { namespace hmm {
     class hidden_markov_model
       {
         public:
-          using floating_point_type = T;
-          using matrix     = typename Eigen::Matrix<floating_point_type, Eigen::Dynamic, Eigen::Dynamic>;
-          using row_vector = typename Eigen::Matrix<floating_point_type, 1, Eigen::Dynamic>;
+          using matrix     = typename Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>;
+          using row_vector = typename Eigen::Matrix<T, 1, Eigen::Dynamic>;
           using size_type  = typename matrix::Index;
 
           struct arguments_not_probability_arrays: public hmm_errors {
