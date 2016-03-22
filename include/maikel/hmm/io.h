@@ -145,6 +145,39 @@ namespace maikel { namespace hmm {
       return length;
     }
 
+  template <class Integral>
+    std::map<std::string, Integral>
+    read_symbol_map(std::istream& in)
+    {
+      std::map<std::string, Integral> symbol_to_index;
+      Integral count{};
+      std::string buffer;
+      std::getline(in, buffer);
+      std::istringstream lstream(buffer);
+      while (lstream >> buffer)
+        if (symbol_to_index.insert(make_pair(buffer, count)).second)
+          ++count;
+      return symbol_to_index;
+    }
+
+  template <class Integral>
+    std::vector<Integral>
+    read_sequence(std::istream& in)
+    {
+      std::vector<Integral> sequence;
+      std::map<std::string, Integral> symbol_to_index = read_symbol_map<Integral>(in);
+      sequence.reserve(read_sequence_length<std::size_t>(in));
+      auto symbol_map = [&symbol_to_index] (std::string const& symbol) {
+          auto found = symbol_to_index.find(symbol);
+          if (found == symbol_to_index.end())
+            throw read_sequence_error("Unkown Symbols in Input.");
+          return found->second;
+      };
+      auto sequence_input = ranges::istream_range<std::string>(in);
+      ranges::copy(sequence_input | ranges::view::transform(symbol_map), ranges::back_inserter(sequence));
+      return sequence;
+    }
+
   template <class Integral, class Symbol>
     std::vector<Integral>
     read_sequence(std::istream& in, std::map<Symbol,Integral>& symbol_to_index)

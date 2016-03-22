@@ -18,6 +18,7 @@
 #include <iostream>
 
 #include <boost/iterator/function_input_iterator.hpp>
+#include <boost/iterator/counting_iterator.hpp>
 
 #include "maikel/hmm/hidden_markov_model.h"
 #include "maikel/hmm/sequence_generator.h"
@@ -51,8 +52,11 @@ int main(int argc, char *argv[])
   }
 
   using Index = decltype(model)::size_type;
+  std::copy(boost::make_counting_iterator<Index>(0),
+            boost::make_counting_iterator<Index>(model.symbols()),
+            std::ostream_iterator<Index>(std::cout, " "));
+  std::cout << "\n" << obslen << "\n";
   std::function<Index()> generator = maikel::hmm::make_sequence_generator(model);
-  std::cout << obslen << "\n";
   std::copy(boost::make_function_input_iterator(generator, std::size_t{0}),
             boost::make_function_input_iterator(generator, obslen),
             std::ostream_iterator<Index>(std::cout, " "));

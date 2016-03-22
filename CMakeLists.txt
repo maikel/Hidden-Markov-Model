@@ -1,7 +1,7 @@
 project(Hidden-Markov-Models)
 cmake_minimum_required(VERSION 3.0)
 
-SET(CMAKE_BUILD_TYPE Profile)
+SET(CMAKE_BUILD_TYPE Release)
 set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
 
 include_directories("${PROJECT_SOURCE_DIR}/third_party/eigen"
@@ -35,3 +35,5 @@ target_compile_options(getlines PUBLIC "-Wpedantic" "-Werror" "-Wfatal-errors" "
 
 add_executable(test_streams test_streams.cpp)
 # target_compile_options(test_streams PUBLIC "-DSTDIO")
+
+add_executable(baum_welch baum_welch.cpp)

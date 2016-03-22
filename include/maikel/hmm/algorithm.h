@@ -26,7 +26,7 @@
 
 #include "maikel/hmm/algorithm/forward.h"
 #include "maikel/hmm/algorithm/backward.h"
-// #include "hmm/algorithm/baum_welch.h"
+#include "maikel/hmm/algorithm/baum_welch.h"
 
 namespace maikel {
 
